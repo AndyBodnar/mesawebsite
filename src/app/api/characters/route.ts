@@ -16,8 +16,7 @@ export async function GET(req: NextRequest) {
       db.character.findMany({
         where,
         include: {
-          user: { select: { id: true, name: true, image: true } },
-          _count: { select: { likes: true } },
+          User: { select: { id: true, name: true, image: true } },
         },
         orderBy: { createdAt: "desc" },
         skip: (page - 1) * limit,
@@ -43,17 +42,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { firstName, lastName, nickname, backstory, faction, image } = await req.json();
+    const { name, backstory, faction, photoUrl, description, dateOfBirth, gender, occupation } = await req.json();
 
     const character = await db.character.create({
       data: {
-        firstName,
-        lastName,
-        nickname,
+        id: crypto.randomUUID(),
+        name,
         backstory,
         faction,
-        image,
+        photoUrl,
+        description,
+        dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
+        gender,
+        occupation,
         userId: session.user.id,
+        updatedAt: new Date(),
       },
     });
 
