@@ -33,6 +33,7 @@ export interface LogStats {
   totalLogs: number
   last24Hours: number
   byScript: { script: string; count: number }[]
+  byCategory?: Record<string, number>
 }
 
 export const logsApi = {
