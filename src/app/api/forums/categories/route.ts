@@ -6,10 +6,10 @@ export async function GET() {
     const categories = await db.forumCategory.findMany({
       include: {
         _count: { select: { ForumThread: true } },
-        threads: {
+        ForumThread: {
           take: 1,
           orderBy: { createdAt: "desc" },
-          include: { author: { select: { id: true, name: true } } },
+          include: { User: { select: { id: true, name: true } } },
         },
       },
       orderBy: { order: "asc" },
@@ -20,10 +20,8 @@ export async function GET() {
       name: cat.name,
       slug: cat.slug,
       description: cat.description,
-      icon: cat.icon,
-      color: cat.color,
-      threadCount: cat._count.threads,
-      latestThread: cat.threads[0] || null,
+      threadCount: cat._count.ForumThread,
+      latestThread: cat.ForumThread[0] || null,
     }));
 
     return NextResponse.json(formatted);
