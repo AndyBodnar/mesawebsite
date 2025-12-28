@@ -44,6 +44,7 @@ export async function POST(req: NextRequest) {
     // Create new reaction
     await db.forumReaction.create({
       data: {
+        id: crypto.randomUUID(),
         type,
         postId,
         userId: session.user.id,
