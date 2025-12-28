@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
       db.newsArticle.findMany({
         where: { ...where, published: true },
         include: {
-          author: { select: { id: true, name: true, image: true } },
+          User: { select: { id: true, name: true, image: true } },
           _count: { select: { NewsComment: true } },
         },
         orderBy: { publishedAt: "desc" },
@@ -49,16 +49,18 @@ export async function POST(req: NextRequest) {
 
     const article = await db.newsArticle.create({
       data: {
+        id: crypto.randomUUID(),
         title,
         slug: `${slug}-${Date.now()}`,
         content,
         excerpt,
         category,
         featured: featured || false,
-        image,
+        coverImage,
         authorId: session.user.id,
         published: true,
         publishedAt: new Date(),
+        updatedAt: new Date(),
       },
     });
 
