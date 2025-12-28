@@ -13,7 +13,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     const event = await db.event.findUnique({
       where: { id },
-      include: { _count: { select: { rsvps: true } } },
+      include: { _count: { select: { EventRsvp: true } } },
     });
 
     if (!event) {
@@ -29,12 +29,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ action: "removed" });
     }
 
-    if (event.maxAttendees && event._count.rsvps >= event.maxAttendees) {
+    if (event.maxAttendees && event._count.EventRsvp >= event.maxAttendees) {
       return NextResponse.json({ error: "Event is full" }, { status: 400 });
     }
 
     await db.eventRsvp.create({
-      data: { eventId: id, userId: session.user.id, status: "GOING" },
+      data: { id: crypto.randomUUID(), eventId: id, userId: session.user.id, status: "GOING" },
     });
 
     return NextResponse.json({ action: "added" }, { status: 201 });
