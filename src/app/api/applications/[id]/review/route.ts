@@ -11,9 +11,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { status, feedback } = await req.json();
+    const { status, reviewNotes } = await req.json();
 
-    if (!["APPROVED", "DENIED"].includes(status)) {
+    if (!["ACCEPTED", "DENIED", "UNDER_REVIEW", "INTERVIEW"].includes(status)) {
       return NextResponse.json({ error: "Invalid status" }, { status: 400 });
     }
 
@@ -21,9 +21,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       where: { id },
       data: {
         status,
-        feedback,
-        reviewerId: session.user.id,
-        reviewedAt: new Date(),
+        reviewNotes,
       },
     });
 
