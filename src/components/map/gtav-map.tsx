@@ -85,7 +85,7 @@ function calculateHeatPoints(players: PlayerPosition[]): HeatPoint[] {
   }));
 }
 
-// Component to render heatmap circles
+// Component to render heatmap circles with pulsing effect
 function HeatmapLayer({ players }: { players: PlayerPosition[] }) {
   const heatPoints = useMemo(() => calculateHeatPoints(players), [players]);
 
@@ -95,10 +95,10 @@ function HeatmapLayer({ players }: { players: PlayerPosition[] }) {
     <>
       {heatPoints.map((point, i) => {
         const coords = gtaToLeaflet(point.x, point.y);
-        // Radius scales with intensity (300-800 map units)
-        const radius = 300 + point.intensity * 500;
-        // Opacity scales with intensity
-        const opacity = 0.2 + point.intensity * 0.4;
+        // Radius scales with player count (200 base + 150 per player)
+        const radius = 200 + (point.count * 150);
+        // Higher opacity - 0.5 to 0.8
+        const opacity = 0.5 + (point.intensity * 0.3);
 
         return (
           <Circle
@@ -106,9 +106,11 @@ function HeatmapLayer({ players }: { players: PlayerPosition[] }) {
             center={coords}
             radius={radius}
             pathOptions={{
-              color: "transparent",
-              fillColor: "#dc2626", // red-600
+              color: "rgba(220, 38, 38, 0.3)",
+              weight: 2,
+              fillColor: "#dc2626",
               fillOpacity: opacity,
+              className: "heat-pulse",
             }}
           />
         );

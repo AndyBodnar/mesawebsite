@@ -145,6 +145,17 @@ export function Footer() {
             <Link href="/rules" className="hover:text-white">Rules</Link>
           </div>
         </div>
+
+        <div className="mt-4 text-center text-xs text-white/30">
+          Built by{" "}
+          <Link
+            href="https://azdevops.io"
+            target="_blank"
+            className="text-white/50 hover:text-white transition"
+          >
+            DevCollective
+          </Link>
+        </div>
       </div>
     </footer>
   );
