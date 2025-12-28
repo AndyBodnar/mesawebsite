@@ -8,17 +8,17 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "20");
-    const category = searchParams.get("category");
+    const type = searchParams.get("type");
 
     const where: Record<string, unknown> = { approved: true };
-    if (category && category !== "All") where.category = category;
+    if (type && type !== "All") where.type = type;
 
     const [items, total] = await Promise.all([
       db.galleryItem.findMany({
         where,
         include: {
-          user: { select: { id: true, name: true, image: true } },
-          _count: { select: { likes: true } },
+          User: { select: { id: true, name: true, image: true } },
+          _count: { select: { GalleryComment: true } },
         },
         orderBy: { createdAt: "desc" },
         skip: (page - 1) * limit,
@@ -44,17 +44,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { title, description, category, url, type } = await req.json();
+    const { caption, url, type } = await req.json();
 
     const item = await db.galleryItem.create({
       data: {
-        title,
-        description,
-        category,
+        id: crypto.randomUUID(),
+        caption,
         url,
-        type: type || "IMAGE",
+        type: type || "image",
         userId: session.user.id,
-        approved: false, // Requires approval
+        approved: false,
       },
     });
 
