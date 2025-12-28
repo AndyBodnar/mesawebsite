@@ -1,55 +1,49 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Clock, MessageSquare, Plus } from "lucide-react";
+import { Clock, MessageSquare, Plus, Loader2, AlertCircle, Inbox } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { StaggerContainer, StaggerItem } from "@/components/ui/motion";
+import { formatDistanceToNow } from "date-fns";
 
-const tickets = [
-  {
-    id: "145",
-    subject: "Can't access my inventory",
-    status: "Open",
-    priority: "High",
-    created: "2 hours ago",
-    updated: "10 min ago",
-    replies: 3,
-    type: "Bug",
-  },
-  {
-    id: "146",
-    subject: "Report player for RDM",
-    status: "In Progress",
-    priority: "Medium",
-    created: "1 day ago",
-    updated: "45 min ago",
-    replies: 5,
-    type: "Report",
-  },
-  {
-    id: "147",
-    subject: "Vehicle disappeared from garage",
-    status: "Resolved",
-    priority: "Low",
-    created: "3 days ago",
-    updated: "8 hours ago",
-    replies: 4,
-    type: "Bug",
-  },
-  {
-    id: "148",
-    subject: "Application status inquiry",
-    status: "Closed",
-    priority: "Low",
-    created: "1 week ago",
-    updated: "2 days ago",
-    replies: 2,
-    type: "Support",
-  },
-];
+interface TicketUser {
+  id: string;
+  name: string | null;
+  image: string | null;
+}
 
+interface Ticket {
+  id: string;
+  type: string;
+  priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+  subject: string;
+  status: "OPEN" | "IN_PROGRESS" | "WAITING_RESPONSE" | "RESOLVED" | "CLOSED";
+  createdAt: string;
+  updatedAt: string;
+  closedAt: string | null;
+  userId: string;
+  assignedToId: string | null;
+  User_Ticket_userIdToUser: TicketUser;
+  User_Ticket_assignedToIdToUser: TicketUser | null;
+  _count: { TicketMessage: number };
+}
+
+const statusMap: Record<string, string> = {
+  OPEN: "Open",
+  IN_PROGRESS: "In Progress",
+  WAITING_RESPONSE: "Waiting",
+  RESOLVED: "Resolved",
+  CLOSED: "Closed",
+};
+
+const priorityMap: Record<string, string> = {
+  LOW: "Low",
+  MEDIUM: "Medium",
+  HIGH: "High",
+  URGENT: "Urgent",
+};
 const statusFilters = ["All", "Open", "In Progress", "Resolved", "Closed"];
 
 const lanes = [
@@ -61,26 +55,80 @@ const lanes = [
 const statusHeat: Record<string, string> = {
   Open: "green",
   "In Progress": "",
+  Waiting: "",
   Resolved: "green",
   Closed: "dim",
 };
 
 export default function TicketsPage() {
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [activeStatus, setActiveStatus] = useState("All");
 
+  useEffect(() => {
+    async function fetchTickets() {
+      try {
+        const res = await fetch("/api/tickets");
+        if (!res.ok) {
+          if (res.status === 401) {
+            setError("Please sign in to view your tickets");
+          } else {
+            setError("Failed to load tickets");
+          }
+          return;
+        }
+        const data = await res.json();
+        setTickets(data);
+      } catch {
+        setError("Failed to load tickets");
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchTickets();
+  }, []);
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return tickets.filter((ticket) => {
+      const displayStatus = statusMap[ticket.status] || ticket.status;
       const matchesQuery =
         !q ||
         ticket.subject.toLowerCase().includes(q) ||
         ticket.type.toLowerCase().includes(q);
-      const matchesStatus = activeStatus === "All" || ticket.status === activeStatus;
+      const matchesStatus = activeStatus === "All" || displayStatus === activeStatus;
       return matchesQuery && matchesStatus;
     });
-  }, [query, activeStatus]);
+  }, [query, activeStatus, tickets]);
 
+  if (loading) {
+    return (
+      <div className="relative">
+        <main className="wrap">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <Loader2 className="h-8 w-8 animate-spin text-white/50" />
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="relative">
+        <main className="wrap">
+          <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+            <AlertCircle className="h-12 w-12 text-red-500" />
+            <p className="text-white/70">{error}</p>
+            <Link href="/auth/signin" className="btn primary">
+              Sign In
+            </Link>
+          </div>
+        </main>
+      </div>
+    );
+  }
   return (
     <div className="relative">
       <main className="wrap">
@@ -117,7 +165,6 @@ export default function TicketsPage() {
               </div>
             </div>
           </motion.section>
-
           <motion.section
             className="panel"
             initial={{ opacity: 0, y: 20 }}
@@ -160,48 +207,70 @@ export default function TicketsPage() {
               <button className="btn">Sort: Recent</button>
             </div>
           </div>
-
-          <StaggerContainer className="threads">
-            {filtered.map((ticket) => (
-              <StaggerItem key={ticket.id}>
-                <Link href={`/tickets/${ticket.id}`}>
-                  <motion.div
-                    className="thread"
-                    whileHover={{ scale: 1.005 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <div className={cn("heat", statusHeat[ticket.status])} />
-                    <div className="avatar">{ticket.type.charAt(0)}</div>
-                    <div className="meta">
-                      <div className="titleRow">
-                        <div className="tTitle">{ticket.subject}</div>
-                        <div className="tag">{ticket.type}</div>
-                        <div className={cn("tag", ticket.priority === "High" && "hot")}>{ticket.priority}</div>
-                        <div className={cn("tag", ticket.status === "Closed" && "lock")}>{ticket.status}</div>
-                      </div>
-                      <div className="sub">
-                        <span>#{ticket.id} - opened {ticket.created}</span>
-                        <span>
-                          Last update <strong>{ticket.updated}</strong>
-                        </span>
-                      </div>
-                    </div>
-                    <div className="stats">
-                      <div className="stat">
-                        <MessageSquare className="h-4 w-4" />
-                        <span>{ticket.replies}</span>
-                      </div>
-                      <div className="stat">
-                        <Clock className="h-4 w-4" />
-                        <span>{ticket.status}</span>
-                      </div>
-                    </div>
-                  </motion.div>
-                </Link>
-              </StaggerItem>
-            ))}
-          </StaggerContainer>
-
+          {tickets.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 gap-4">
+              <Inbox className="h-12 w-12 text-white/30" />
+              <p className="text-white/50">No tickets yet</p>
+              <Link href="/tickets/new" className="btn primary">
+                <Plus className="h-4 w-4" />
+                Create Your First Ticket
+              </Link>
+            </div>
+          ) : (
+            <StaggerContainer className="threads">
+              {filtered.map((ticket) => {
+                const displayStatus = statusMap[ticket.status] || ticket.status;
+                const displayPriority = priorityMap[ticket.priority] || ticket.priority;
+                return (
+                  <StaggerItem key={ticket.id}>
+                    <Link href={`/tickets/${ticket.id}`}>
+                      <motion.div
+                        className="thread"
+                        whileHover={{ scale: 1.005 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <div className={cn("heat", statusHeat[displayStatus])} />
+                        <div className="avatar">{ticket.type.charAt(0)}</div>
+                        <div className="meta">
+                          <div className="titleRow">
+                            <div className="tTitle">{ticket.subject}</div>
+                            <div className="tag">{ticket.type}</div>
+                            <div className={cn("tag", (ticket.priority === "HIGH" || ticket.priority === "URGENT") && "hot")}>
+                              {displayPriority}
+                            </div>
+                            <div className={cn("tag", ticket.status === "CLOSED" && "lock")}>
+                              {displayStatus}
+                            </div>
+                          </div>                          <div className="sub">
+                            <span>
+                              #{ticket.id.slice(0, 8)} - opened{" "}
+                              {formatDistanceToNow(new Date(ticket.createdAt), { addSuffix: true })}
+                            </span>
+                            <span>
+                              Last update{" "}
+                              <strong>
+                                {formatDistanceToNow(new Date(ticket.updatedAt), { addSuffix: true })}
+                              </strong>
+                            </span>
+                          </div>
+                        </div>
+                        <div className="stats">
+                          <div className="stat">
+                            <MessageSquare className="h-4 w-4" />
+                            <span>{ticket._count.TicketMessage}</span>
+                          </div>
+                          <div className="stat">
+                            <Clock className="h-4 w-4" />
+                            <span>{displayStatus}</span>
+                          </div>
+                        </div>
+                      </motion.div>
+                    </Link>
+                  </StaggerItem>
+                );
+              })}
+            </StaggerContainer>
+          )}
           <div className="pager">
             <div>Showing 1-{filtered.length} of {tickets.length} tickets</div>
             <div className="pages">
