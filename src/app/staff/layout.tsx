@@ -141,25 +141,9 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
       {sidebarOpen && <div className="staff-overlay" onClick={() => setSidebarOpen(false)} />}
 
       <main className="staff-main">
-        <div className="staff-top">
-          <button className="staff-mobile-menu" onClick={() => setSidebarOpen(true)}>
-            <Menu className="w-5 h-5" />
-          </button>
-          <div className="staff-tabs">
-            {filteredNav.slice(0, 7).map((item) => {
-              const isActive = pathname === item.href
-              return (
-                <Link key={item.href} href={item.href} className={`staff-tab ${isActive ? "active" : ""}`}>
-                  {item.name}
-                </Link>
-              )
-            })}
-          </div>
-          <div className="staff-statusbar">
-            <div className="staff-chip"><span className="staff-chip-dot" /><b>SERVER</b> ONLINE</div>
-            <div className="staff-chip red">UPLINK <b>LINKED</b></div>
-          </div>
-        </div>
+        <button className="staff-mobile-menu" onClick={() => setSidebarOpen(true)}>
+          <Menu className="w-5 h-5" />
+        </button>
         {children}
       </main>
     </div>

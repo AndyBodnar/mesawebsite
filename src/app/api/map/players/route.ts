@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { recordPlayerCount } from '@/lib/store/player-history'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 5
@@ -136,6 +137,9 @@ export async function POST(req: Request) {
     if (Array.isArray(players)) {
       cachedPositions = players
       lastPositionUpdate = Date.now()
+
+      // Record player count for history tracking
+      recordPlayerCount(players.length)
     }
 
     return NextResponse.json({

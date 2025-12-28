@@ -298,3 +298,22 @@ export function useTxAdmins() {
 export function useTxStats() {
   return useFetch(() => api.txadmin.getStats(), [])
 }
+
+// ============================================
+// Stats Hooks (Player Activity)
+// ============================================
+
+export function usePlayerActivityHistory() {
+  const result = useFetch(() => api.stats.getPlayerActivityHistory(), [])
+
+  // Auto-refresh every 5 minutes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      result.refetch()
+    }, 5 * 60 * 1000)
+    return () => clearInterval(interval)
+  }, [result.refetch])
+
+  return result
+}
+

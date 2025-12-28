@@ -17,7 +17,7 @@ import {
 } from 'lucide-react'
 
 // Hooks
-import { useDashboard, useLogs } from '@/hooks'
+import { useDashboard, useLogs, usePlayerActivityHistory } from '@/hooks'
 
 // Components
 import { StatsCard } from '@/components/staff/StatsCard'
@@ -30,6 +30,7 @@ import { ServerPerformanceChart } from '@/components/charts/ServerPerformanceCha
 export default function StaffDashboard() {
   const { players, logStats, serverInfo, loading, isRefreshing, error, refetch } = useDashboard()
   const { data: logsData, loading: logsLoading } = useLogs({ limit: 20 })
+  const { data: activityHistory, loading: activityLoading } = usePlayerActivityHistory()
 
   // Transform players data for the panel
   const playersList = useMemo(() => {
@@ -70,25 +71,18 @@ export default function StaffDashboard() {
     }))
   }, [logStats])
 
-  // Generate player activity data (24h)
+  // Use real player activity history data (falls back to current count if no history)
   const playerActivityData = useMemo(() => {
-    const currentPlayers = players?.count || 0
-    const hours = []
-    const now = new Date()
-    for (let i = 23; i >= 0; i--) {
-      const hour = new Date(now.getTime() - i * 60 * 60 * 1000)
-      const hourStr = hour.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
-      // Simulate activity pattern - lower at night, higher in evening
-      const hourOfDay = hour.getHours()
-      const baseMultiplier = hourOfDay >= 18 && hourOfDay <= 23 ? 0.9 : 
-                            hourOfDay >= 12 && hourOfDay < 18 ? 0.7 :
-                            hourOfDay >= 6 && hourOfDay < 12 ? 0.4 : 0.2
-      const variance = 0.8 + Math.random() * 0.4
-      const playerCount = i === 0 ? currentPlayers : Math.floor(currentPlayers * baseMultiplier * variance)
-      hours.push({ time: hourStr, players: Math.max(0, playerCount) })
+    // If we have real history data, use it
+    if (activityHistory?.history && activityHistory.history.length > 0) {
+      return activityHistory.history
     }
-    return hours
-  }, [players?.count])
+    // Fallback: show current player count as the only data point
+    const currentPlayers = players?.count || 0
+    const now = new Date()
+    const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+    return [{ time: timeStr, players: currentPlayers }]
+  }, [activityHistory, players?.count])
 
   // Generate server performance data with current values
   const [perfHistory, setPerfHistory] = useState<{ time: string; cpu: number; memory: number; tick: number }[]>([])

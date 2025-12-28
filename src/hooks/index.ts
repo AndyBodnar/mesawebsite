@@ -36,4 +36,6 @@ export {
   useTxWarns,
   useTxAdmins,
   useTxStats,
+  // Stats hooks
+  usePlayerActivityHistory,
 } from './useApi'

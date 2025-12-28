@@ -384,6 +384,27 @@ export const txadminApi = {
   },
 }
 
+
+// Stats API - player activity history
+export interface PlayerActivityEntry {
+  time: string
+  players: number
+  timestamp?: number
+}
+
+export interface PlayerActivityHistoryResponse {
+  history: PlayerActivityEntry[]
+  raw: PlayerActivityEntry[]
+  totalEntries: number
+}
+
+const statsApi = {
+  // Get player count history for the last 24 hours
+  getPlayerActivityHistory: (): Promise<PlayerActivityHistoryResponse> => {
+    return fetcher('/api/stats/player-history')
+  },
+}
+
 // Export all APIs
 export const api = {
   logs: logsApi,
@@ -394,6 +415,7 @@ export const api = {
   server: serverApi,
   moderation: moderationApi,
   txadmin: txadminApi,
+  stats: statsApi,
 }
 
 export default api
