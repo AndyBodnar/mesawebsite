@@ -2116,6 +2116,39 @@ body::after {
   font-weight: 600;
   color: white;
 }
+/* Heatmap Legend */
+.gtav-legend-heat {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.gtav-legend-heat-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 0.5rem;
+}
+
+.gtav-legend-heat-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.625rem;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.gtav-legend-heat-gradient {
+  flex: 1;
+  height: 8px;
+  border-radius: 4px;
+  background: linear-gradient(to right, 
+    rgba(220, 38, 38, 0.2),
+    rgba(220, 38, 38, 0.4),
+    rgba(220, 38, 38, 0.6),
+    rgba(220, 38, 38, 0.8)
+  );
+}
 
 /* Map Loading State */
 .gtav-map-loading {

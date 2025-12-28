@@ -30,8 +30,8 @@ const roleIcons: Record<string, typeof Shield> = {
 function getJobCategory(job: string | null | undefined): string {
   if (!job) return "civilian";
   const j = job.toLowerCase();
-  if (["police", "lspd", "bcso", "sahp", "ranger", "leo"].some(k => j.includes(k))) return "police";
-  if (["ems", "ambulance", "fire", "doctor", "paramedic"].some(k => j.includes(k))) return "ems";
+  if (["police", "lspd", "bcso", "sahp", "ranger", "leo", "sheriff", "trooper", "highway", "swat", "fib", "doj", "judge", "marshal", "state", "deputy", "officer", "sergeant", "lieutenant", "captain", "chief", "detective", "corporal"].some(k => j.includes(k))) return "police";
+  if (["ems", "ambulance", "fire", "doctor", "paramedic", "nurse", "medic", "hospital", "fdny", "lsfd", "firefighter", "rescue"].some(k => j.includes(k))) return "ems";
   if (["mechanic", "bennys", "tuner", "lscustoms"].some(k => j.includes(k))) return "mechanic";
   if (["realestate", "banker", "lawyer", "manager", "ceo", "owner"].some(k => j.includes(k))) return "business";
   return "civilian";
@@ -243,6 +243,7 @@ export default function MapPage() {
                 roleStats={roleStats}
                 totalPlayers={totalPlayers}
                 maxPlayers={maxPlayers}
+                players={players}
               />
             </div>
           </motion.section>

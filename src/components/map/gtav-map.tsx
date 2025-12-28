@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { MapContainer, ImageOverlay, useMap } from "react-leaflet";
+import { MapContainer, ImageOverlay, useMap, Circle } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -13,11 +13,109 @@ export type RoleStats = {
   icon?: React.ReactNode;
 };
 
+export type PlayerPosition = {
+  x: number;
+  y: number;
+  job?: string | null;
+};
+
+export type HeatPoint = {
+  x: number;
+  y: number;
+  intensity: number;
+  count: number;
+};
+
 type GTAVMapProps = {
   roleStats?: RoleStats[];
   totalPlayers?: number;
   maxPlayers?: number;
+  players?: PlayerPosition[];
+  showHeatmap?: boolean;
 };
+
+// GTA V coordinate bounds
+const GTA_BOUNDS = {
+  minX: -4000,
+  maxX: 4500,
+  minY: -4000,
+  maxY: 8000,
+};
+
+// Map image bounds (8192x8192)
+const MAP_SIZE = 8192;
+
+// Convert GTA coordinates to Leaflet map coordinates
+function gtaToLeaflet(x: number, y: number): [number, number] {
+  const leafletX = ((x - GTA_BOUNDS.minX) / (GTA_BOUNDS.maxX - GTA_BOUNDS.minX)) * MAP_SIZE;
+  // Y is inverted in GTA (positive is north)
+  const leafletY = MAP_SIZE - ((y - GTA_BOUNDS.minY) / (GTA_BOUNDS.maxY - GTA_BOUNDS.minY)) * MAP_SIZE;
+  return [leafletY, leafletX]; // Leaflet uses [lat, lng] which maps to [y, x]
+}
+
+// Calculate heat points from player positions
+function calculateHeatPoints(players: PlayerPosition[]): HeatPoint[] {
+  if (players.length === 0) return [];
+
+  const grid: Map<string, { x: number; y: number; count: number }> = new Map();
+  const GRID_SIZE = 500; // Group players in 500-unit cells
+
+  players.forEach(player => {
+    if (player.x === 0 && player.y === 0) return; // Skip invalid positions
+
+    const gridX = Math.floor(player.x / GRID_SIZE) * GRID_SIZE;
+    const gridY = Math.floor(player.y / GRID_SIZE) * GRID_SIZE;
+    const key = `${gridX},${gridY}`;
+
+    const existing = grid.get(key);
+    if (existing) {
+      existing.count++;
+    } else {
+      grid.set(key, { x: gridX + GRID_SIZE / 2, y: gridY + GRID_SIZE / 2, count: 1 });
+    }
+  });
+
+  const maxCount = Math.max(...Array.from(grid.values()).map(g => g.count), 1);
+
+  return Array.from(grid.values()).map(g => ({
+    x: g.x,
+    y: g.y,
+    count: g.count,
+    intensity: g.count / maxCount,
+  }));
+}
+
+// Component to render heatmap circles
+function HeatmapLayer({ players }: { players: PlayerPosition[] }) {
+  const heatPoints = useMemo(() => calculateHeatPoints(players), [players]);
+
+  if (heatPoints.length === 0) return null;
+
+  return (
+    <>
+      {heatPoints.map((point, i) => {
+        const coords = gtaToLeaflet(point.x, point.y);
+        // Radius scales with intensity (300-800 map units)
+        const radius = 300 + point.intensity * 500;
+        // Opacity scales with intensity
+        const opacity = 0.2 + point.intensity * 0.4;
+
+        return (
+          <Circle
+            key={i}
+            center={coords}
+            radius={radius}
+            pathOptions={{
+              color: "transparent",
+              fillColor: "#dc2626", // red-600
+              fillOpacity: opacity,
+            }}
+          />
+        );
+      })}
+    </>
+  );
+}
 
 // Component to handle map initialization
 function MapController() {
@@ -32,7 +130,13 @@ function MapController() {
   return null;
 }
 
-export function GTAVMap({ roleStats = [], totalPlayers = 0, maxPlayers = 200 }: GTAVMapProps) {
+export function GTAVMap({
+  roleStats = [],
+  totalPlayers = 0,
+  maxPlayers = 200,
+  players = [],
+  showHeatmap = true,
+}: GTAVMapProps) {
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
@@ -42,10 +146,10 @@ export function GTAVMap({ roleStats = [], totalPlayers = 0, maxPlayers = 200 }: 
   // Map bounds - the image is 8192x8192 (square)
   const bounds = useMemo((): L.LatLngBoundsExpression => [
     [0, 0],
-    [8192, 8192],
+    [MAP_SIZE, MAP_SIZE],
   ], []);
 
-  const center: L.LatLngExpression = [4096, 4096];
+  const center: L.LatLngExpression = [MAP_SIZE / 2, MAP_SIZE / 2];
 
   if (!isClient) {
     return (
@@ -76,6 +180,10 @@ export function GTAVMap({ roleStats = [], totalPlayers = 0, maxPlayers = 200 }: 
           url="/gtav-map.jpg"
           bounds={bounds}
         />
+        {/* Heatmap overlay showing population density */}
+        {showHeatmap && players.length > 0 && (
+          <HeatmapLayer players={players} />
+        )}
       </MapContainer>
 
       {/* Stats Legend Overlay */}
@@ -106,6 +214,18 @@ export function GTAVMap({ roleStats = [], totalPlayers = 0, maxPlayers = 200 }: 
             </div>
           ))}
         </div>
+
+        {/* Heatmap legend */}
+        {showHeatmap && players.length > 0 && (
+          <div className="gtav-legend-heat">
+            <div className="gtav-legend-heat-label">Activity Hotspots</div>
+            <div className="gtav-legend-heat-bar">
+              <span>Low</span>
+              <div className="gtav-legend-heat-gradient" />
+              <span>High</span>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
