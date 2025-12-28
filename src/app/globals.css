@@ -49,20 +49,20 @@
   --radius: 18px;
 
   /* Core colors */
-  --bg-0: #05070b;
-  --bg-1: #0a0f1a;
-  --bg-2: #0f1523;
-  --bg-3: #141a2a;
+  --bg-0: #030303;
+  --bg-1: #080808;
+  --bg-2: #0d0d0d;
+  --bg-3: #121212;
   --ink: #e5e7eb;
   --muted-ink: #9ca3af;
   --muted-ink-2: #6b7280;
 
-  --background: 220 22% 4%;
+  --background: 0 0% 2%;
   --foreground: 0 0% 92%;
 
-  --card: 220 18% 7%;
+  --card: 0 0% 4%;
   --card-foreground: 0 0% 92%;
-  --popover: 220 18% 7%;
+  --popover: 0 0% 4%;
   --popover-foreground: 0 0% 92%;
 
   /* Primary - Blood Red */
@@ -72,12 +72,12 @@
   --red-glow: rgba(255, 45, 45, 0.25);
 
   /* Secondary - Grey */
-  --secondary: 220 16% 12%;
+  --secondary: 0 0% 8%;
   --secondary-foreground: 0 0% 92%;
 
   /* Muted - Grey tones (lightened for dark bg) */
-  --muted: 220 8% 28%;
-  --muted-foreground: 220 8% 70%;
+  --muted: 0 0% 20%;
+  --muted-foreground: 0 0% 65%;
   --muted-2: 220 8% 55%;
 
   /* Accent - Red */
@@ -1238,7 +1238,7 @@ body::after {
     padding: 12px 16px;
     border-radius: 6px;
     border: 1px solid rgba(255, 255, 255, 0.16);
-    background: #0b0f18;
+    background: #0a0a0a;
     color: rgba(255, 255, 255, 0.92);
     cursor: pointer;
     font-weight: 800;
@@ -1551,7 +1551,7 @@ body::after {
   .store-offer {
     border-radius: 6px;
     border: 1px solid rgba(255, 255, 255, 0.16);
-    background: linear-gradient(180deg, #0d111b, #070a11);
+    background: linear-gradient(180deg, #0a0a0a, #060606);
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.75);
     overflow: hidden;
     position: relative;
@@ -2228,7 +2228,7 @@ body::after {
   background:
     radial-gradient(ellipse at 30% 40%, rgba(59, 130, 246, 0.2) 0%, transparent 50%),
     radial-gradient(ellipse at 70% 60%, rgba(239, 68, 68, 0.15) 0%, transparent 40%),
-    linear-gradient(135deg, #0f1f3d 0%, #162544 50%, #0a1628 100%);
+    linear-gradient(135deg, #0f1f3d 0%, #162544 50%, #0a0a0a 100%);
   overflow: hidden;
 }
 
@@ -2333,7 +2333,7 @@ body::after {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #0a1628;
+  background: #0a0a0a;
 }
 
 .gtav-map-image {
@@ -2697,7 +2697,7 @@ body::after {
 }
 
 .forum-select option {
-  background: #1a1a2e;
+  background: #141414;
   color: #fff;
 }
 
