@@ -121,12 +121,18 @@ export interface MapPlayersResponse {
   players: {
     id: number
     name: string
-    identifier: string
-    coords: { x: number; y: number; z: number }
-    heading: number
-    job?: string
-    vehicle?: string
+    x: number
+    y: number
+    z: number
+    heading?: number
+    health?: number
+    armor?: number
+    job?: string | null
+    ping?: number
   }[]
+  count: number
+  source: 'live' | 'basic' | 'cached' | 'offline' | 'error'
+  lastUpdate: number | null
 }
 
 export interface MapBlip {
