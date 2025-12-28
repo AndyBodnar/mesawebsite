@@ -7,8 +7,15 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const upcoming = searchParams.get("upcoming") === "true";
+    const type = searchParams.get("type");
 
-    const where = upcoming ? { startTime: { gte: new Date() } } : {};
+    const where: Record<string, unknown> = {};
+    if (upcoming) {
+      where.startTime = { gte: new Date() };
+    }
+    if (type) {
+      where.type = type;
+    }
 
     const events = await db.event.findMany({
       where,
@@ -35,6 +42,23 @@ export async function POST(req: NextRequest) {
 
     const { title, description, location, startTime, endTime, type, recurring, maxAttendees } = await req.json();
 
+    // Check permissions for Server events
+    if (type === "Server") {
+      const user = await db.user.findUnique({
+        where: { id: session.user.id },
+        select: { role: true },
+      });
+
+      if (!user || !["ADMIN", "SUPERADMIN"].includes(user.role)) {
+        return NextResponse.json({ error: "Only admins can create server events" }, { status: 403 });
+      }
+    }
+
+    // Validate required fields
+    if (!title || !description || !startTime || !type) {
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    }
+
     const event = await db.event.create({
       data: {
         id: crypto.randomUUID(),
@@ -48,6 +72,10 @@ export async function POST(req: NextRequest) {
         maxAttendees,
         authorId: session.user.id,
         updatedAt: new Date(),
+      },
+      include: {
+        User: { select: { id: true, name: true, image: true } },
+        _count: { select: { EventRsvp: true } },
       },
     });
 
