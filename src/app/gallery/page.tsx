@@ -1,29 +1,101 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Image as ImageIcon, Heart, Eye, Plus } from "lucide-react";
+import { Image as ImageIcon, Heart, Plus, Loader2, ImageOff, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatDistanceToNow } from "date-fns";
 
-const categories = ["All", "Screenshots", "Artwork", "Videos", "Memes"];
+interface GalleryUser {
+  id: string;
+  name: string | null;
+  image: string | null;
+}
 
-const galleryItems = [
-  { id: "1", title: "Sunset at Del Perro Pier", author: "PhotoPro", likes: 234, views: 1234, category: "Screenshots" },
-  { id: "2", title: "Gang War Scene", author: "GangsterRP", likes: 189, views: 987, category: "Screenshots" },
-  { id: "3", title: "Custom Character Art", author: "ArtistX", likes: 456, views: 2341, category: "Artwork" },
-  { id: "4", title: "High Speed Chase", author: "ActionCam", likes: 312, views: 1567, category: "Videos" },
-  { id: "5", title: "LSPD Group Photo", author: "ChiefMiller", likes: 278, views: 1123, category: "Screenshots" },
-  { id: "6", title: "When you forget to brake", author: "MemeLord", likes: 567, views: 3456, category: "Memes" },
-];
+interface GalleryItem {
+  id: string;
+  type: string;
+  url: string;
+  caption: string | null;
+  approved: boolean;
+  featured: boolean;
+  likes: number;
+  createdAt: string;
+  userId: string;
+  User: GalleryUser;
+  _count: { GalleryComment: number };
+}
 
+interface GalleryResponse {
+  items: GalleryItem[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+}
+
+const categories = ["All", "image", "video", "artwork"];
+
+const categoryLabels: Record<string, string> = {
+  All: "All",
+  image: "Screenshots",
+  video: "Videos",
+  artwork: "Artwork",
+};
 export default function GalleryPage() {
+  const [items, setItems] = useState<GalleryItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState("All");
+  const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, pages: 0 });
 
-  const filtered = useMemo(() => {
-    if (activeCategory === "All") return galleryItems;
-    return galleryItems.filter((item) => item.category === activeCategory);
-  }, [activeCategory]);
+  useEffect(() => {
+    async function fetchGallery() {
+      setLoading(true);
+      try {
+        const typeParam = activeCategory !== "All" ? `&type=${activeCategory}` : "";
+        const res = await fetch(`/api/gallery?page=${pagination.page}&limit=20${typeParam}`);
+        if (!res.ok) {
+          throw new Error("Failed to load gallery");
+        }
+        const data: GalleryResponse = await res.json();
+        setItems(data.items);
+        setPagination(data.pagination);
+      } catch {
+        setError("Failed to load gallery");
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchGallery();
+  }, [activeCategory, pagination.page]);
 
+  if (loading && items.length === 0) {
+    return (
+      <div className="relative">
+        <main className="wrap">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <Loader2 className="h-8 w-8 animate-spin text-white/50" />
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="relative">
+        <main className="wrap">
+          <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+            <ImageOff className="h-12 w-12 text-red-500" />
+            <p className="text-white/70">{error}</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
   return (
     <div className="relative">
       <main className="wrap">
@@ -38,9 +110,12 @@ export default function GalleryPage() {
                   <button
                     key={cat}
                     className={cn("chip", activeCategory === cat && "on")}
-                    onClick={() => setActiveCategory(cat)}
+                    onClick={() => {
+                      setActiveCategory(cat);
+                      setPagination(p => ({ ...p, page: 1 }));
+                    }}
                   >
-                    {cat}
+                    {categoryLabels[cat] || cat}
                   </button>
                 ))}
               </div>
@@ -63,36 +138,72 @@ export default function GalleryPage() {
               </button>
             </div>
           </div>
-
-          <div className="threads">
-            {filtered.map((item) => (
-              <motion.div key={item.id} className="thread" whileHover={{ scale: 1.005 }} transition={{ duration: 0.2 }}>
-                <div className={cn("heat", item.likes > 300 && "green")} />
-                <div className="avatar">
-                  <ImageIcon className="h-4 w-4" />
-                </div>
-                <div className="meta">
-                  <div className="titleRow">
-                    <div className="tTitle">{item.title}</div>
-                    <div className="tag">{item.category}</div>
+          {items.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 gap-4">
+              <ImageOff className="h-12 w-12 text-white/30" />
+              <p className="text-white/50">No gallery items yet</p>
+            </div>
+          ) : (
+            <div className="threads">
+              {items.map((item) => (
+                <motion.div key={item.id} className="thread" whileHover={{ scale: 1.005 }} transition={{ duration: 0.2 }}>
+                  <div className={cn("heat", item.featured && "green")} />
+                  <div className="avatar">
+                    {item.type === "video" ? (
+                      <span>V</span>
+                    ) : (
+                      <ImageIcon className="h-4 w-4" />
+                    )}
                   </div>
-                  <div className="sub">
-                    <span>by <strong>{item.author}</strong></span>
+                  <div className="meta">
+                    <div className="titleRow">
+                      <div className="tTitle">{item.caption || "Untitled"}</div>
+                      <div className="tag">{categoryLabels[item.type] || item.type}</div>
+                      {item.featured && <div className="tag hot">Featured</div>}
+                    </div>
+                    <div className="sub">
+                      <span>by <strong>{item.User?.name || "Unknown"}</strong></span>
+                      <span>{formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}</span>
+                    </div>
                   </div>
-                </div>
-                <div className="stats">
-                  <div className="stat">
-                    <Heart className="h-4 w-4" />
-                    <span>{item.likes}</span>
+                  <div className="stats">
+                    <div className="stat">
+                      <Heart className="h-4 w-4" />
+                      <span>{item.likes}</span>
+                    </div>
+                    <div className="stat">
+                      <MessageSquare className="h-4 w-4" />
+                      <span>{item._count.GalleryComment}</span>
+                    </div>
                   </div>
-                  <div className="stat">
-                    <Eye className="h-4 w-4" />
-                    <span>{item.views}</span>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
+          {pagination.pages > 1 && (
+            <div className="pager">
+              <div>Showing {((pagination.page - 1) * pagination.limit) + 1}-{Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} items</div>
+              <div className="pages">
+                {Array.from({ length: Math.min(pagination.pages, 5) }, (_, i) => i + 1).map((p) => (
+                  <button
+                    key={p}
+                    className={cn("page", pagination.page === p && "on")}
+                    onClick={() => setPagination(prev => ({ ...prev, page: p }))}
+                  >
+                    {p}
+                  </button>
+                ))}
+                {pagination.pages > 5 && (
+                  <button
+                    className="page"
+                    onClick={() => setPagination(prev => ({ ...prev, page: Math.min(prev.page + 1, pagination.pages) }))}
+                  >
+                    &gt;
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
         </section>
       </main>
     </div>
