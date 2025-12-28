@@ -16,8 +16,8 @@ export async function GET(req: NextRequest) {
     const tickets = await db.ticket.findMany({
       where,
       include: {
-        user: { select: { id: true, name: true, image: true } },
-        assignee: { select: { id: true, name: true } },
+        User_Ticket_userIdToUser: { select: { id: true, name: true, image: true } },
+        User_Ticket_assignedToIdToUser: { select: { id: true, name: true } },
         _count: { select: { TicketMessage: true } },
       },
       orderBy: { updatedAt: "desc" },
@@ -37,24 +37,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { subject, category, priority, message } = await req.json();
+    const { subject, type, priority, message } = await req.json();
 
     const ticket = await db.ticket.create({
       data: {
+        id: crypto.randomUUID(),
         subject,
-        category,
+        type,
         priority: priority || "MEDIUM",
         status: "OPEN",
         userId: session.user.id,
-        messages: {
+        updatedAt: new Date(),
+        TicketMessage: {
           create: {
+            id: crypto.randomUUID(),
             content: message,
             userId: session.user.id,
           },
         },
       },
       include: {
-        messages: true,
+        TicketMessage: true,
       },
     });
 

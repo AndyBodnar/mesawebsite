@@ -9,9 +9,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const org = await db.organization.findUnique({
       where: { id },
       include: {
-        leader: { select: { id: true, name: true, image: true } },
-        members: {
-          include: { user: { select: { id: true, name: true, image: true } } },
+        User: { select: { id: true, name: true, image: true } },
+        OrganizationMember: {
+          include: { User: { select: { id: true, name: true, image: true } } },
           orderBy: { role: "asc" },
         },
         _count: { select: { OrganizationMember: true } },
@@ -49,7 +49,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
 
     const data = await req.json();
-    const updated = await db.organization.update({ where: { id }, data });
+    const updated = await db.organization.update({ where: { id }, data: { ...data, updatedAt: new Date() } });
     return NextResponse.json(updated);
   } catch (error) {
     console.error("Failed to update organization:", error);

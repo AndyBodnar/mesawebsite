@@ -22,6 +22,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       data: {
         status,
         reviewNotes,
+        updatedAt: new Date(),
       },
     });
 

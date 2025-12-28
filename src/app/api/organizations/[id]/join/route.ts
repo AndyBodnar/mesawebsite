@@ -11,17 +11,23 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { characterId } = await req.json();
+
+    if (!characterId) {
+      return NextResponse.json({ error: "Character ID is required" }, { status: 400 });
+    }
+
     const org = await db.organization.findUnique({ where: { id } });
     if (!org) {
       return NextResponse.json({ error: "Organization not found" }, { status: 404 });
     }
 
-    if (!org.recruiting) {
+    if (org.recruitmentStatus !== "open") {
       return NextResponse.json({ error: "Organization is not recruiting" }, { status: 400 });
     }
 
     const existing = await db.organizationMember.findFirst({
-      where: { organizationId: id, userId: session.user.id },
+      where: { orgId: id, characterId },
     });
 
     if (existing) {
@@ -29,7 +35,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
 
     await db.organizationMember.create({
-      data: { organizationId: id, userId: session.user.id, role: "MEMBER" },
+      data: { id: crypto.randomUUID(), orgId: id, userId: session.user.id, characterId, role: "MEMBER" },
     });
 
     return NextResponse.json({ success: true }, { status: 201 });
@@ -48,7 +54,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     }
 
     const membership = await db.organizationMember.findFirst({
-      where: { organizationId: id, userId: session.user.id },
+      where: { orgId: id, userId: session.user.id },
     });
 
     if (!membership) {

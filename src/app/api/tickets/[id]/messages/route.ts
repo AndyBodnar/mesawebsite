@@ -27,8 +27,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     const { content } = await req.json();
     const message = await db.ticketMessage.create({
-      data: { content, ticketId: id, userId: session.user.id, isStaff },
-      include: { user: { select: { id: true, name: true, image: true, role: true } } },
+      data: { id: crypto.randomUUID(), content, ticketId: id, userId: session.user.id, isInternal: isStaff },
+      include: { User: { select: { id: true, name: true, image: true, role: true } } },
     });
 
     await db.ticket.update({ where: { id }, data: { updatedAt: new Date() } });

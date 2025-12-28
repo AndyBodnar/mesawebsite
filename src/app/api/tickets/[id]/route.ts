@@ -14,10 +14,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const ticket = await db.ticket.findUnique({
       where: { id },
       include: {
-        user: { select: { id: true, name: true, image: true } },
-        assignee: { select: { id: true, name: true, image: true } },
-        messages: {
-          include: { user: { select: { id: true, name: true, image: true, role: true } } },
+        User_Ticket_userIdToUser: { select: { id: true, name: true, image: true } },
+        User_Ticket_assignedToIdToUser: { select: { id: true, name: true, image: true } },
+        TicketMessage: {
+          include: { User: { select: { id: true, name: true, image: true, role: true } } },
           orderBy: { createdAt: "asc" },
         },
       },
@@ -53,7 +53,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
 
     const data = await req.json();
-    const ticket = await db.ticket.update({ where: { id }, data });
+    const ticket = await db.ticket.update({ where: { id }, data: { ...data, updatedAt: new Date() } });
     return NextResponse.json(ticket);
   } catch (error) {
     console.error("Failed to update ticket:", error);

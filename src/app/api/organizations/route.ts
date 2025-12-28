@@ -11,15 +11,15 @@ export async function GET(req: NextRequest) {
 
     const where: Record<string, unknown> = {};
     if (type) where.type = type;
-    if (recruiting === "true") where.recruiting = true;
+    if (recruiting === "true") where.recruitmentStatus = "open";
 
     const organizations = await db.organization.findMany({
       where,
       include: {
-        leader: { select: { id: true, name: true, image: true } },
+        User: { select: { id: true, name: true, image: true } },
         _count: { select: { OrganizationMember: true } },
       },
-      orderBy: { members: { _count: "desc" } },
+      orderBy: { OrganizationMember: { _count: "desc" } },
     });
 
     return NextResponse.json(organizations);
@@ -36,20 +36,31 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { name, description, type, image } = await req.json();
+    const { name, description, type, logoUrl, characterId } = await req.json();
+
+    if (!characterId) {
+      return NextResponse.json({ error: "Character ID is required" }, { status: 400 });
+    }
+
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+    const timestamp = Date.now();
 
     const org = await db.organization.create({
       data: {
+        id: crypto.randomUUID(),
         name,
+        slug: slug + "-" + timestamp,
         description,
         type,
-        image,
+        logoUrl,
         leaderId: session.user.id,
-        verified: false,
-        recruiting: true,
-        members: {
+        recruitmentStatus: "open",
+        updatedAt: new Date(),
+        OrganizationMember: {
           create: {
+            id: crypto.randomUUID(),
             userId: session.user.id,
+            characterId,
             role: "LEADER",
           },
         },

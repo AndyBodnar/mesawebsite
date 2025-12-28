@@ -14,10 +14,10 @@ export async function GET(req: NextRequest) {
     const suggestions = await db.suggestion.findMany({
       where,
       include: {
-        user: { select: { id: true, name: true, image: true } },
+        User: { select: { id: true, name: true, image: true } },
         _count: { select: { SuggestionVote: true } },
       },
-      orderBy: sort === "votes" ? { votes: { _count: "desc" } } : { createdAt: "desc" },
+      orderBy: sort === "votes" ? { SuggestionVote: { _count: "desc" } } : { createdAt: "desc" },
     });
 
     // Calculate net votes for each suggestion
@@ -25,9 +25,9 @@ export async function GET(req: NextRequest) {
       suggestions.map(async (s) => {
         const votes = await db.suggestionVote.aggregate({
           where: { suggestionId: s.id },
-          _sum: { value: true },
+          _sum: { vote: true },
         });
-        return { ...s, netVotes: votes._sum.value || 0 };
+        return { ...s, netVotes: votes._sum.vote || 0 };
       })
     );
 
@@ -49,11 +49,13 @@ export async function POST(req: NextRequest) {
 
     const suggestion = await db.suggestion.create({
       data: {
+        id: crypto.randomUUID(),
         title,
         description,
         category,
-        status: "UNDER_REVIEW",
+        status: "NEW",
         userId: session.user.id,
+        updatedAt: new Date(),
       },
     });
 
