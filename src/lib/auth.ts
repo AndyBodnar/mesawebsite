@@ -1,80 +1,105 @@
 import { NextAuthOptions } from "next-auth";
 import DiscordProvider from "next-auth/providers/discord";
-import { PrismaAdapter } from "@auth/prisma-adapter";
 import { Adapter, AdapterUser, AdapterAccount, AdapterSession } from "next-auth/adapters";
 import { db } from "./db";
 
-// Custom adapter wrapper to handle id and updatedAt fields
-// Prisma schema has id String @id without auto-generation and updatedAt without default
+// Custom adapter - PrismaAdapter uses lowercase relation names but our schema uses PascalCase
 function CustomPrismaAdapter(): Adapter {
-  const prismaAdapter = PrismaAdapter(db) as Adapter;
-
   return {
-    ...prismaAdapter,
     createUser: async (data: Omit<AdapterUser, "id">) => {
-      try {
-        console.log("[Auth] Creating user with data:", JSON.stringify(data, null, 2));
-        const user = await db.user.create({
-          data: {
-            id: crypto.randomUUID(),
-            name: data.name,
-            email: data.email,
-            emailVerified: data.emailVerified,
-            image: data.image,
-            discordId: (data as any).discordId || (data as any).id,
-            updatedAt: new Date(),
-          },
-        });
-        console.log("[Auth] User created:", user.id);
-        return user as AdapterUser;
-      } catch (error) {
-        console.error("[Auth] Failed to create user:", error);
-        throw error;
-      }
+      const user = await db.user.create({
+        data: {
+          id: crypto.randomUUID(),
+          name: data.name,
+          email: data.email,
+          emailVerified: data.emailVerified,
+          image: data.image,
+          discordId: (data as any).discordId || (data as any).id,
+          updatedAt: new Date(),
+        },
+      });
+      return user as AdapterUser;
+    },
+    getUser: async (id: string) => {
+      const user = await db.user.findUnique({ where: { id } });
+      return user as AdapterUser | null;
+    },
+    getUserByEmail: async (email: string) => {
+      const user = await db.user.findUnique({ where: { email } });
+      return user as AdapterUser | null;
+    },
+    getUserByAccount: async ({ providerAccountId, provider }) => {
+      const account = await db.account.findUnique({
+        where: {
+          provider_providerAccountId: { provider, providerAccountId },
+        },
+        include: { User: true },
+      });
+      return (account?.User as AdapterUser) ?? null;
+    },
+    updateUser: async (data) => {
+      const user = await db.user.update({
+        where: { id: data.id },
+        data: { ...data, updatedAt: new Date() },
+      });
+      return user as AdapterUser;
+    },
+    deleteUser: async (userId: string) => {
+      await db.user.delete({ where: { id: userId } });
     },
     linkAccount: async (data: AdapterAccount) => {
-      try {
-        console.log("[Auth] Linking account for user:", data.userId);
-        await db.account.create({
-          data: {
-            id: crypto.randomUUID(),
-            userId: data.userId,
-            type: data.type,
-            provider: data.provider,
-            providerAccountId: data.providerAccountId,
-            refresh_token: data.refresh_token,
-            access_token: data.access_token,
-            expires_at: data.expires_at,
-            token_type: data.token_type,
-            scope: data.scope,
-            id_token: data.id_token,
-            session_state: data.session_state as string | null,
-          },
-        });
-        console.log("[Auth] Account linked successfully");
-        return data;
-      } catch (error) {
-        console.error("[Auth] Failed to link account:", error);
-        throw error;
-      }
+      await db.account.create({
+        data: {
+          id: crypto.randomUUID(),
+          userId: data.userId,
+          type: data.type,
+          provider: data.provider,
+          providerAccountId: data.providerAccountId,
+          refresh_token: data.refresh_token,
+          access_token: data.access_token,
+          expires_at: data.expires_at,
+          token_type: data.token_type,
+          scope: data.scope,
+          id_token: data.id_token,
+          session_state: data.session_state as string | null,
+        },
+      });
+      return data;
+    },
+    unlinkAccount: async ({ providerAccountId, provider }) => {
+      await db.account.delete({
+        where: { provider_providerAccountId: { provider, providerAccountId } },
+      });
     },
     createSession: async (data: { sessionToken: string; userId: string; expires: Date }) => {
-      try {
-        console.log("[Auth] Creating session for user:", data.userId);
-        const session = await db.session.create({
-          data: {
-            id: crypto.randomUUID(),
-            sessionToken: data.sessionToken,
-            userId: data.userId,
-            expires: data.expires,
-          },
-        });
-        console.log("[Auth] Session created:", session.id);
-        return session as AdapterSession;
-      } catch (error) {
-        console.error("[Auth] Failed to create session:", error);
-        throw error;
-      }
+      const session = await db.session.create({
+        data: {
+          id: crypto.randomUUID(),
+          sessionToken: data.sessionToken,
+          userId: data.userId,
+          expires: data.expires,
+        },
+      });
+      return session as AdapterSession;
+    },
+    getSessionAndUser: async (sessionToken: string) => {
+      const session = await db.session.findUnique({
+        where: { sessionToken },
+        include: { User: true },
+      });
+      if (!session) return null;
+      const { User, ...sessionData } = session;
+      return { session: sessionData as AdapterSession, user: User as AdapterUser };
+    },
+    updateSession: async (data) => {
+      const session = await db.session.update({
+        where: { sessionToken: data.sessionToken },
+        data,
+      });
+      return session as AdapterSession;
+    },
+    deleteSession: async (sessionToken: string) => {
+      await db.session.delete({ where: { sessionToken } });
     },
   };
 }
@@ -124,7 +149,6 @@ function determineStaffRole(discordRoles: string[]): StaffRole {
 
 export const authOptions: NextAuthOptions = {
   adapter: CustomPrismaAdapter(),
-  debug: true,
   providers: [
     DiscordProvider({
       clientId: process.env.DISCORD_CLIENT_ID!,
@@ -135,7 +159,6 @@ export const authOptions: NextAuthOptions = {
         },
       },
       profile(profile) {
-        console.log("[Auth] Discord profile received:", profile.id, profile.username);
         return {
           id: profile.id,
           name: profile.username,
@@ -152,7 +175,6 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async signIn({ account }) {
-      console.log("[Auth] signIn callback triggered");
       if (account?.access_token && GUILD_ID) {
         const roles = await getDiscordRoles(account.access_token);
         const staffRole = determineStaffRole(roles);
@@ -180,14 +202,11 @@ export const authOptions: NextAuthOptions = {
   },
   events: {
     async signIn({ user, account }) {
-      console.log("[Auth] signIn event - updating staff role for user:", user.id);
       if (account && user.id) {
         try {
           await db.user.update({
             where: { id: user.id },
-            data: {
-              staffRole: account.staffRole || "user",
-            },
+            data: { staffRole: account.staffRole || "user" },
           });
         } catch (error) {
           console.log("Could not update staff role:", error);
