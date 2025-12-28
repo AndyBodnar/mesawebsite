@@ -1,9 +1,9 @@
-import { API_URL } from './config'
+// Using relative paths for Next.js API routes
 import type { GameLog, PlayerData, ServerInfo, LoadingState } from './socket'
 
 // Generic fetch wrapper
 async function fetcher<T>(endpoint: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_URL}${endpoint}`, {
+  const res = await fetch(endpoint, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
@@ -213,7 +213,7 @@ export const loadingApi = {
 export const authApi = {
   // Get Discord OAuth URL
   getDiscordUrl: (): string => {
-    return `${API_URL}/api/auth/discord`
+    return "/api/auth/discord"
   },
 
   // Get current user
