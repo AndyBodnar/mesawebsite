@@ -1,7 +1,62 @@
 import { NextAuthOptions } from "next-auth";
 import DiscordProvider from "next-auth/providers/discord";
 import { PrismaAdapter } from "@auth/prisma-adapter";
+import { Adapter, AdapterUser, AdapterAccount, AdapterSession } from "next-auth/adapters";
 import { db } from "./db";
+
+// Custom adapter wrapper to handle id and updatedAt fields
+// Prisma schema has id String @id without auto-generation and updatedAt without default
+function CustomPrismaAdapter(): Adapter {
+  const prismaAdapter = PrismaAdapter(db) as Adapter;
+
+  return {
+    ...prismaAdapter,
+    createUser: async (data: Omit<AdapterUser, "id">) => {
+      const user = await db.user.create({
+        data: {
+          id: crypto.randomUUID(),
+          name: data.name,
+          email: data.email,
+          emailVerified: data.emailVerified,
+          image: data.image,
+          discordId: (data as any).discordId || (data as any).id,
+          updatedAt: new Date(),
+        },
+      });
+      return user as AdapterUser;
+    },
+    linkAccount: async (data: AdapterAccount) => {
+      await db.account.create({
+        data: {
+          id: crypto.randomUUID(),
+          userId: data.userId,
+          type: data.type,
+          provider: data.provider,
+          providerAccountId: data.providerAccountId,
+          refresh_token: data.refresh_token,
+          access_token: data.access_token,
+          expires_at: data.expires_at,
+          token_type: data.token_type,
+          scope: data.scope,
+          id_token: data.id_token,
+          session_state: data.session_state as string | null,
+        },
+      });
+      return data;
+    },
+    createSession: async (data: { sessionToken: string; userId: string; expires: Date }) => {
+      const session = await db.session.create({
+        data: {
+          id: crypto.randomUUID(),
+          sessionToken: data.sessionToken,
+          userId: data.userId,
+          expires: data.expires,
+        },
+      });
+      return session as AdapterSession;
+    },
+  };
+}
 
 // Role configuration
 const GUILD_ID = process.env.DISCORD_GUILD_ID || "";
@@ -12,7 +67,7 @@ const STAFF_ROLE_IDS = (process.env.DISCORD_STAFF_ROLE_IDS || "").split(",").fil
 export type StaffRole = "owner" | "admin" | "staff" | "user";
 
 // Fetch Discord guild member roles
-async function getDiscordRoles(accessToken: string, userId: string): Promise<string[]> {
+async function getDiscordRoles(accessToken: string): Promise<string[]> {
   if (!GUILD_ID) return [];
 
   try {
@@ -48,7 +103,7 @@ function determineStaffRole(discordRoles: string[]): StaffRole {
 }
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(db) as NextAuthOptions["adapter"],
+  adapter: CustomPrismaAdapter(),
   providers: [
     DiscordProvider({
       clientId: process.env.DISCORD_CLIENT_ID!,
@@ -74,10 +129,10 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async signIn({ account, profile }) {
+    async signIn({ account }) {
       // Check if user is in the guild and get their roles
       if (account?.access_token && GUILD_ID) {
-        const roles = await getDiscordRoles(account.access_token, ((profile as any)?.id || ""));
+        const roles = await getDiscordRoles(account.access_token);
         const staffRole = determineStaffRole(roles);
 
         // Store role in account for later use
