@@ -3,31 +3,20 @@ import { db } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const user = await db.user.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: {
-        id: true,
-        name: true,
-        image: true,
-        role: true,
-        bio: true,
-        createdAt: true,
-        _count: {
-          select: {
-            forumPosts: true,
-            characters: true,
-            galleryItems: true,
-          },
-        },
+        id: true, name: true, image: true, role: true, bio: true, createdAt: true,
+        _count: { select: { forumPosts: true, characters: true, galleryItems: true } },
       },
     });
 
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
-
     return NextResponse.json(user);
   } catch (error) {
     console.error("Failed to fetch user:", error);
@@ -35,14 +24,15 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions);
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const isOwner = session.user.id === params.id;
+    const isOwner = session.user.id === id;
     const isAdmin = ["ADMIN", "SUPERADMIN"].includes(session.user.role);
 
     if (!isOwner && !isAdmin) {
@@ -50,19 +40,14 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     }
 
     const data = await req.json();
-
-    // Regular users can only update certain fields
-    const allowedFields = isAdmin
-      ? ["name", "bio", "role", "banned"]
-      : ["name", "bio"];
-
+    const allowedFields = isAdmin ? ["name", "bio", "role", "banned"] : ["name", "bio"];
     const updateData: Record<string, unknown> = {};
     allowedFields.forEach((field) => {
       if (data[field] !== undefined) updateData[field] = data[field];
     });
 
     const user = await db.user.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
       select: { id: true, name: true, bio: true, role: true },
     });

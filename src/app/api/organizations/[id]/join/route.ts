@@ -3,14 +3,15 @@ import { db } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions);
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const org = await db.organization.findUnique({ where: { id: params.id } });
+    const org = await db.organization.findUnique({ where: { id } });
     if (!org) {
       return NextResponse.json({ error: "Organization not found" }, { status: 404 });
     }
@@ -19,9 +20,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       return NextResponse.json({ error: "Organization is not recruiting" }, { status: 400 });
     }
 
-    // Check if already a member
     const existing = await db.organizationMember.findFirst({
-      where: { organizationId: params.id, userId: session.user.id },
+      where: { organizationId: id, userId: session.user.id },
     });
 
     if (existing) {
@@ -29,11 +29,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     }
 
     await db.organizationMember.create({
-      data: {
-        organizationId: params.id,
-        userId: session.user.id,
-        role: "MEMBER",
-      },
+      data: { organizationId: id, userId: session.user.id, role: "MEMBER" },
     });
 
     return NextResponse.json({ success: true }, { status: 201 });
@@ -43,15 +39,16 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions);
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const membership = await db.organizationMember.findFirst({
-      where: { organizationId: params.id, userId: session.user.id },
+      where: { organizationId: id, userId: session.user.id },
     });
 
     if (!membership) {
@@ -63,7 +60,6 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     }
 
     await db.organizationMember.delete({ where: { id: membership.id } });
-
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Failed to leave organization:", error);

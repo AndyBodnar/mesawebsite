@@ -71,3 +71,5 @@ public/test_*.jpg
 *.pfx
 credentials.json
 service-account.json
+
+.vercel

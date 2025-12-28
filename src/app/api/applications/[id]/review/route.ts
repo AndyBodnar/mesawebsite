@@ -3,8 +3,9 @@ import { db } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions);
     if (!session?.user || !["ADMIN", "SUPERADMIN", "MODERATOR"].includes(session.user.role)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -17,7 +18,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     }
 
     const application = await db.application.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         status,
         feedback,
@@ -25,8 +26,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         reviewedAt: new Date(),
       },
     });
-
-    // TODO: Send notification to user
 
     return NextResponse.json(application);
   } catch (error) {

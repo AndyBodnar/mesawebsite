@@ -3,10 +3,11 @@ import { db } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const thread = await db.forumThread.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         author: { select: { id: true, name: true, image: true, role: true, createdAt: true } },
         category: { select: { id: true, name: true, slug: true } },
@@ -25,9 +26,8 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       return NextResponse.json({ error: "Thread not found" }, { status: 404 });
     }
 
-    // Increment views
     await db.forumThread.update({
-      where: { id: params.id },
+      where: { id },
       data: { views: { increment: 1 } },
     });
 
@@ -38,14 +38,15 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions);
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const thread = await db.forumThread.findUnique({ where: { id: params.id } });
+    const thread = await db.forumThread.findUnique({ where: { id } });
     if (!thread) {
       return NextResponse.json({ error: "Thread not found" }, { status: 404 });
     }
@@ -58,20 +59,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     }
 
     const data = await req.json();
-    const allowedFields = isStaff
-      ? ["title", "content", "pinned", "locked"]
-      : ["title", "content"];
-
+    const allowedFields = isStaff ? ["title", "content", "pinned", "locked"] : ["title", "content"];
     const updateData: Record<string, unknown> = {};
     allowedFields.forEach((field) => {
       if (data[field] !== undefined) updateData[field] = data[field];
     });
 
-    const updated = await db.forumThread.update({
-      where: { id: params.id },
-      data: updateData,
-    });
-
+    const updated = await db.forumThread.update({ where: { id }, data: updateData });
     return NextResponse.json(updated);
   } catch (error) {
     console.error("Failed to update thread:", error);
@@ -79,14 +73,15 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions);
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const thread = await db.forumThread.findUnique({ where: { id: params.id } });
+    const thread = await db.forumThread.findUnique({ where: { id } });
     if (!thread) {
       return NextResponse.json({ error: "Thread not found" }, { status: 404 });
     }
@@ -98,8 +93,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    await db.forumThread.delete({ where: { id: params.id } });
-
+    await db.forumThread.delete({ where: { id } });
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Failed to delete thread:", error);

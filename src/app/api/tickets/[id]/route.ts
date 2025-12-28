@@ -3,15 +3,16 @@ import { db } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions);
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const ticket = await db.ticket.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         user: { select: { id: true, name: true, image: true } },
         assignee: { select: { id: true, name: true, image: true } },
@@ -38,8 +39,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions);
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -51,12 +53,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     }
 
     const data = await req.json();
-
-    const ticket = await db.ticket.update({
-      where: { id: params.id },
-      data,
-    });
-
+    const ticket = await db.ticket.update({ where: { id }, data });
     return NextResponse.json(ticket);
   } catch (error) {
     console.error("Failed to update ticket:", error);

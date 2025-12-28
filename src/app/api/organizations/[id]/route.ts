@@ -3,10 +3,11 @@ import { db } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const org = await db.organization.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         leader: { select: { id: true, name: true, image: true } },
         members: {
@@ -20,7 +21,6 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     if (!org) {
       return NextResponse.json({ error: "Organization not found" }, { status: 404 });
     }
-
     return NextResponse.json(org);
   } catch (error) {
     console.error("Failed to fetch organization:", error);
@@ -28,14 +28,15 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions);
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const org = await db.organization.findUnique({ where: { id: params.id } });
+    const org = await db.organization.findUnique({ where: { id } });
     if (!org) {
       return NextResponse.json({ error: "Organization not found" }, { status: 404 });
     }
@@ -48,11 +49,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     }
 
     const data = await req.json();
-    const updated = await db.organization.update({
-      where: { id: params.id },
-      data,
-    });
-
+    const updated = await db.organization.update({ where: { id }, data });
     return NextResponse.json(updated);
   } catch (error) {
     console.error("Failed to update organization:", error);
