@@ -12,19 +12,19 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url);
     const status = searchParams.get("status");
-    const type = searchParams.get("type");
+    const templateId = searchParams.get("templateId");
 
     const isStaff = ["ADMIN", "SUPERADMIN", "MODERATOR"].includes(session.user.role);
 
     const where: Record<string, unknown> = isStaff ? {} : { userId: session.user.id };
     if (status) where.status = status;
-    if (type) where.type = type;
+    if (templateId) where.templateId = templateId;
 
     const applications = await db.application.findMany({
       where,
       include: {
-        user: { select: { id: true, name: true, image: true } },
-        reviewer: { select: { id: true, name: true } },
+        User: { select: { id: true, name: true, image: true } },
+        ApplicationTemplate: { select: { id: true, name: true, type: true } },
       },
       orderBy: { createdAt: "desc" },
     });
@@ -43,11 +43,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { type, responses } = await req.json();
+    const { templateId, responses } = await req.json();
 
-    // Check for existing pending application of same type
     const existing = await db.application.findFirst({
-      where: { userId: session.user.id, type, status: "PENDING" },
+      where: { userId: session.user.id, templateId, status: "PENDING" },
     });
 
     if (existing) {
@@ -56,10 +55,12 @@ export async function POST(req: NextRequest) {
 
     const application = await db.application.create({
       data: {
-        type,
-        responses,
+        id: crypto.randomUUID(),
+        templateId,
+        responses: JSON.stringify(responses),
         userId: session.user.id,
         status: "PENDING",
+        updatedAt: new Date(),
       },
     });
 
