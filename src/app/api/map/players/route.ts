@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { recordPlayerCount } from '@/lib/store/player-history'
+import { db } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 5
@@ -30,6 +30,23 @@ interface PlayerPosition {
 // In-memory cache for positions pushed from FiveM
 let cachedPositions: PlayerPosition[] = []
 let lastPositionUpdate = 0
+let lastHistoryRecord = 0
+const HISTORY_INTERVAL = 5 * 60 * 1000 // Record every 5 minutes
+
+async function recordPlayerCount(count: number) {
+  const now = Date.now()
+  // Record immediately on first call, then every 5 minutes
+  if (lastHistoryRecord !== 0 && now - lastHistoryRecord < HISTORY_INTERVAL) return
+
+  try {
+    await db.playerHistory.create({
+      data: { playerCount: count }
+    })
+    lastHistoryRecord = now
+  } catch (error) {
+    console.error('Failed to record player history:', error)
+  }
+}
 
 export async function GET() {
   try {
@@ -93,7 +110,6 @@ export async function GET() {
     }
 
     // No position data - return players without positions
-    // They'll appear but won't have map coordinates
     const players = fivemPlayers.map(p => ({
       id: p.id,
       name: p.name,
@@ -110,7 +126,7 @@ export async function GET() {
     return NextResponse.json({
       players,
       count: players.length,
-      source: 'basic', // No position data
+      source: 'basic',
       lastUpdate: null,
     })
   } catch (error) {
@@ -138,8 +154,8 @@ export async function POST(req: Request) {
       cachedPositions = players
       lastPositionUpdate = Date.now()
 
-      // Record player count for history tracking
-      recordPlayerCount(players.length)
+      // Record player count to database
+      await recordPlayerCount(players.length)
     }
 
     return NextResponse.json({

@@ -619,6 +619,15 @@ enum User_role {
   SUPERADMIN
 }
 
+model PlayerHistory {
+  id          Int      @id @default(autoincrement())
+  playerCount Int      @default(0) @map("player_count")
+  recordedAt  DateTime @default(now()) @map("recorded_at")
+
+  @@index([recordedAt])
+  @@map("web_player_history")
+}
+
 enum Character_status {
   ALIVE
   DECEASED
