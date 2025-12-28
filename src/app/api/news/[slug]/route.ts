@@ -9,9 +9,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
     const article = await db.newsArticle.findUnique({
       where: { slug },
       include: {
-        author: { select: { id: true, name: true, image: true, role: true } },
-        comments: {
-          include: { author: { select: { id: true, name: true, image: true } } },
+        User: { select: { id: true, name: true, image: true, role: true } },
+        NewsComment: {
+          include: { User: { select: { id: true, name: true, image: true } } },
           orderBy: { createdAt: "desc" },
         },
         _count: { select: { NewsComment: true } },
@@ -22,7 +22,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
       return NextResponse.json({ error: "Article not found" }, { status: 404 });
     }
 
-    await db.newsArticle.update({ where: { id: article.id }, data: { views: { increment: 1 } } });
     return NextResponse.json(article);
   } catch (error) {
     console.error("Failed to fetch article:", error);
