@@ -59,11 +59,39 @@ export default function GalleryPage() {
 
   // Upload modal state
   const [showUpload, setShowUpload] = useState(false);
-  const [uploadUrl, setUploadUrl] = useState("");
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadPreview, setUploadPreview] = useState<string | null>(null);
   const [uploadCaption, setUploadCaption] = useState("");
   const [uploadType, setUploadType] = useState("image");
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadFile(file);
+    setUploadError(null);
+
+    // Auto-detect type from MIME
+    if (file.type.startsWith("video/")) {
+      setUploadType("video");
+    } else {
+      setUploadType("image");
+    }
+
+    // Create preview URL
+    const previewUrl = URL.createObjectURL(file);
+    setUploadPreview(previewUrl);
+  }
+
+  function clearUpload() {
+    setUploadFile(null);
+    if (uploadPreview) {
+      URL.revokeObjectURL(uploadPreview);
+      setUploadPreview(null);
+    }
+  }
 
   useEffect(() => {
     async function fetchGallery() {
@@ -88,8 +116,8 @@ export default function GalleryPage() {
 
   async function handleUpload(e: React.FormEvent) {
     e.preventDefault();
-    if (!uploadUrl.trim()) {
-      setUploadError("Please enter an image URL");
+    if (!uploadFile) {
+      setUploadError("Please select a file");
       return;
     }
 
@@ -97,11 +125,28 @@ export default function GalleryPage() {
     setUploadError(null);
 
     try {
+      // First upload the file
+      const formData = new FormData();
+      formData.append("file", uploadFile);
+
+      const uploadRes = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!uploadRes.ok) {
+        const data = await uploadRes.json();
+        throw new Error(data.error || "Failed to upload file");
+      }
+
+      const { url } = await uploadRes.json();
+
+      // Then create gallery entry
       const res = await fetch("/api/gallery", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          url: uploadUrl,
+          url,
           caption: uploadCaption || null,
           type: uploadType,
         }),
@@ -109,11 +154,11 @@ export default function GalleryPage() {
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Failed to upload");
+        throw new Error(data.error || "Failed to create gallery entry");
       }
 
       setShowUpload(false);
-      setUploadUrl("");
+      clearUpload();
       setUploadCaption("");
       setUploadType("image");
       alert("Upload submitted! It will appear after approval.");
@@ -181,15 +226,37 @@ export default function GalleryPage() {
                 )}
 
                 <div>
-                  <label className="block text-sm text-white/70 mb-2">Image/Video URL *</label>
-                  <input
-                    type="url"
-                    value={uploadUrl}
-                    onChange={(e) => setUploadUrl(e.target.value)}
-                    placeholder="https://example.com/image.jpg"
-                    className="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-white placeholder-white/40 focus:outline-none focus:border-white/20"
-                    disabled={uploading}
-                  />
+                  <label className="block text-sm text-white/70 mb-2">Select File *</label>
+                  {!uploadPreview ? (
+                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-white/20 rounded-lg cursor-pointer hover:border-white/40 transition-colors">
+                      <Upload className="h-8 w-8 text-white/40 mb-2" />
+                      <span className="text-sm text-white/50">Click to select image or video</span>
+                      <span className="text-xs text-white/30 mt-1">JPG, PNG, GIF, WEBP, MP4, WEBM (max 50MB)</span>
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm"
+                        onChange={handleFileSelect}
+                        className="hidden"
+                        disabled={uploading}
+                      />
+                    </label>
+                  ) : (
+                    <div className="relative">
+                      {uploadFile?.type.startsWith("video/") ? (
+                        <video src={uploadPreview} className="w-full h-32 object-cover rounded-lg" />
+                      ) : (
+                        <img src={uploadPreview} alt="Preview" className="w-full h-32 object-cover rounded-lg" />
+                      )}
+                      <button
+                        type="button"
+                        onClick={clearUpload}
+                        className="absolute top-2 right-2 bg-black/50 rounded-full p-1 hover:bg-black/70"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                      <div className="text-xs text-white/50 mt-2">{uploadFile?.name}</div>
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -237,7 +304,7 @@ export default function GalleryPage() {
                   </button>
                   <button
                     type="submit"
-                    disabled={uploading || !uploadUrl.trim()}
+                    disabled={uploading || !uploadFile}
                     className="btn primary flex-1 flex items-center justify-center gap-2"
                   >
                     {uploading ? (
