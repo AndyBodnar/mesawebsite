@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { title, content, excerpt, category, featured, image } = await req.json();
+    const { title, content, excerpt, category, featured, coverImage } = await req.json();
 
     const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 
