@@ -14,7 +14,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
           include: { user: { select: { id: true, name: true, image: true } } },
           orderBy: { role: "asc" },
         },
-        _count: { select: { members: true } },
+        _count: { select: { OrganizationMember: true } },
       },
     });
 

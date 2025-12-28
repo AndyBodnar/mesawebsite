@@ -8,15 +8,15 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const upcoming = searchParams.get("upcoming") === "true";
 
-    const where = upcoming ? { startDate: { gte: new Date() } } : {};
+    const where = upcoming ? { startTime: { gte: new Date() } } : {};
 
     const events = await db.event.findMany({
       where,
       include: {
-        organizer: { select: { id: true, name: true, image: true } },
-        _count: { select: { rsvps: true } },
+        User: { select: { id: true, name: true, image: true } },
+        _count: { select: { EventRsvp: true } },
       },
-      orderBy: { startDate: "asc" },
+      orderBy: { startTime: "asc" },
     });
 
     return NextResponse.json(events);
@@ -33,19 +33,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { title, description, location, startDate, endDate, category, image, maxAttendees } = await req.json();
+    const { title, description, location, startTime, endTime, type, recurring, maxAttendees } = await req.json();
 
     const event = await db.event.create({
       data: {
+        id: crypto.randomUUID(),
         title,
         description,
         location,
-        startDate: new Date(startDate),
-        endDate: endDate ? new Date(endDate) : null,
-        category,
-        image,
+        startTime: new Date(startTime),
+        endTime: endTime ? new Date(endTime) : null,
+        type,
+        recurring,
         maxAttendees,
-        organizerId: session.user.id,
+        authorId: session.user.id,
+        updatedAt: new Date(),
       },
     });
 

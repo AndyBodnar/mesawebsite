@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
       where,
       include: {
         user: { select: { id: true, name: true, image: true } },
-        _count: { select: { votes: true, comments: true } },
+        _count: { select: { SuggestionVote: true } },
       },
       orderBy: sort === "votes" ? { votes: { _count: "desc" } } : { createdAt: "desc" },
     });

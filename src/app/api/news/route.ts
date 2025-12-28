@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
         where: { ...where, published: true },
         include: {
           author: { select: { id: true, name: true, image: true } },
-          _count: { select: { comments: true } },
+          _count: { select: { NewsComment: true } },
         },
         orderBy: { publishedAt: "desc" },
         skip: (page - 1) * limit,

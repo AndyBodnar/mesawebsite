@@ -5,7 +5,7 @@ export async function GET() {
   try {
     const categories = await db.forumCategory.findMany({
       include: {
-        _count: { select: { threads: true } },
+        _count: { select: { ForumThread: true } },
         threads: {
           take: 1,
           orderBy: { createdAt: "desc" },

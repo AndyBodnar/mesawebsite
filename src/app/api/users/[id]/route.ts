@@ -10,7 +10,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       where: { id },
       select: {
         id: true, name: true, image: true, role: true, bio: true, createdAt: true,
-        _count: { select: { forumPosts: true, characters: true, galleryItems: true } },
+        _count: { select: { ForumPost: true, Character: true, GalleryItem: true } },
       },
     });
 

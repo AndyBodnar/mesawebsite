@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
       where,
       include: {
         leader: { select: { id: true, name: true, image: true } },
-        _count: { select: { members: true } },
+        _count: { select: { OrganizationMember: true } },
       },
       orderBy: { members: { _count: "desc" } },
     });

@@ -10,15 +10,15 @@ export async function GET(req: NextRequest) {
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "20");
 
-    const where = categorySlug ? { category: { slug: categorySlug } } : {};
+    const where = categorySlug ? { ForumCategory: { slug: categorySlug } } : {};
 
     const [threads, total] = await Promise.all([
       db.forumThread.findMany({
         where,
         include: {
-          author: { select: { id: true, name: true, image: true, role: true } },
-          category: { select: { id: true, name: true, slug: true } },
-          _count: { select: { posts: true } },
+          User: { select: { id: true, name: true, image: true, role: true } },
+          ForumCategory: { select: { id: true, name: true, slug: true } },
+          _count: { select: { ForumPost: true } },
         },
         orderBy: [{ pinned: "desc" }, { createdAt: "desc" }],
         skip: (page - 1) * limit,
@@ -61,8 +61,8 @@ export async function POST(req: NextRequest) {
         categoryId,
       },
       include: {
-        author: { select: { id: true, name: true, image: true } },
-        category: { select: { id: true, name: true, slug: true } },
+        User: { select: { id: true, name: true, image: true } },
+        ForumCategory: { select: { id: true, name: true, slug: true } },
       },
     });
 

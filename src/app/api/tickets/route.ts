@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
       include: {
         user: { select: { id: true, name: true, image: true } },
         assignee: { select: { id: true, name: true } },
-        _count: { select: { messages: true } },
+        _count: { select: { TicketMessage: true } },
       },
       orderBy: { updatedAt: "desc" },
     });

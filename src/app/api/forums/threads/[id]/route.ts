@@ -18,7 +18,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
           },
           orderBy: { createdAt: "asc" },
         },
-        _count: { select: { posts: true } },
+        _count: { select: { ForumPost: true } },
       },
     });
 

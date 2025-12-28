@@ -14,7 +14,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
           include: { author: { select: { id: true, name: true, image: true } } },
           orderBy: { createdAt: "desc" },
         },
-        _count: { select: { comments: true } },
+        _count: { select: { NewsComment: true } },
       },
     });
 
