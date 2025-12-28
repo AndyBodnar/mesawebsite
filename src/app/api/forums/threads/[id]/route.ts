@@ -28,7 +28,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
     await db.forumThread.update({
       where: { id },
-      data: { views: { increment: 1 } },
+      data: { views: { increment: 1 }, updatedAt: new Date() },
     });
 
     return NextResponse.json(thread);
