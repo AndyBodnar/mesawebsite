@@ -27,12 +27,14 @@ export async function POST(req: NextRequest) {
 
     const post = await db.forumPost.create({
       data: {
+        id: crypto.randomUUID(),
         content,
         threadId,
         authorId: session.user.id,
+        updatedAt: new Date(),
       },
       include: {
-        author: { select: { id: true, name: true, image: true, role: true } },
+        User: { select: { id: true, name: true, image: true, role: true } },
       },
     });
 
