@@ -24,14 +24,14 @@ import {
 type StaffRole = 'owner' | 'admin' | 'staff' | 'user'
 
 const navigation = [
-  { name: 'Dashboard', href: '/staff', icon: LayoutDashboard, code: '00', tag: 'LIVE', minRole: 'staff' as StaffRole },
-  { name: 'Players', href: '/staff/players', icon: Users, code: '01', tag: '64', minRole: 'staff' as StaffRole },
-  { name: 'Logs', href: '/staff/logs', icon: ScrollText, code: '02', tag: 'STREAM', minRole: 'staff' as StaffRole },
-  { name: 'Live Map', href: '/staff/map', icon: Map, code: '03', tag: 'GRID', minRole: 'staff' as StaffRole },
-  { name: 'Bans & Warns', href: '/staff/moderation', icon: Ban, code: '04', tag: 'QUEUE', minRole: 'admin' as StaffRole },
-  { name: 'Server', href: '/staff/server', icon: Server, code: '05', tag: 'CORE', minRole: 'admin' as StaffRole },
-  { name: 'Admins', href: '/staff/admins', icon: Shield, code: '06', tag: 'ACL', minRole: 'owner' as StaffRole },
-  { name: 'Settings', href: '/staff/settings', icon: Settings, code: '07', tag: 'OPS', minRole: 'owner' as StaffRole },
+  { name: 'Dashboard', href: '/staff', icon: LayoutDashboard, minRole: 'staff' as StaffRole },
+  { name: 'Players', href: '/staff/players', icon: Users, minRole: 'staff' as StaffRole },
+  { name: 'Logs', href: '/staff/logs', icon: ScrollText, minRole: 'staff' as StaffRole },
+  { name: 'Live Map', href: '/staff/map', icon: Map, minRole: 'staff' as StaffRole },
+  { name: 'Bans & Warns', href: '/staff/moderation', icon: Ban, minRole: 'admin' as StaffRole },
+  { name: 'Server', href: '/staff/server', icon: Server, minRole: 'admin' as StaffRole },
+  { name: 'Admins', href: '/staff/admins', icon: Shield, minRole: 'owner' as StaffRole },
+  { name: 'Settings', href: '/staff/settings', icon: Settings, minRole: 'owner' as StaffRole },
 ]
 
 const roleHierarchy: Record<StaffRole, number> = { user: 0, staff: 1, admin: 2, owner: 3 }
@@ -106,20 +106,16 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
           </div>
           <div className="staff-brand-tag">STAFF NODE</div>
         </div>
-        <div className="staff-search">
-          <div className="staff-search-key">CTRL K</div>
-          <input placeholder="Command palette: ban, warn, restart..." />
-        </div>
+        
         <nav className="staff-menu">
           {filteredNav.map((item) => {
             const isActive = pathname === item.href
             return (
               <Link key={item.href} href={item.href} className={`staff-menu-item ${isActive ? "active" : ""}`}>
                 <div className="staff-menu-left">
-                  <span className="staff-menu-code">{item.code}</span>
+                  <item.icon className="w-4 h-4 opacity-50" />
                   {item.name}
                 </div>
-                <span className="staff-menu-tag">{item.tag}</span>
               </Link>
             )
           })}
