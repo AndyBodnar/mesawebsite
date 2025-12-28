@@ -67,6 +67,8 @@ export const authOptions: NextAuthOptions = {
             ? `https://cdn.discordapp.com/avatars/${profile.id}/${profile.avatar}.${profile.avatar.startsWith("a_") ? "gif" : "png"}`
             : `https://cdn.discordapp.com/embed/avatars/${parseInt(profile.discriminator) % 5}.png`,
           discordId: profile.id,
+          role: 'MEMBER' as const,
+          staffRole: 'user' as const,
         };
       },
     }),
@@ -75,13 +77,11 @@ export const authOptions: NextAuthOptions = {
     async signIn({ account, profile }) {
       // Check if user is in the guild and get their roles
       if (account?.access_token && GUILD_ID) {
-        const roles = await getDiscordRoles(account.access_token, profile?.id || "");
+        const roles = await getDiscordRoles(account.access_token, ((profile as any)?.id || ""));
         const staffRole = determineStaffRole(roles);
 
         // Store role in account for later use
-        // @ts-expect-error - extending account
         account.staffRole = staffRole;
-        // @ts-expect-error - extending account
         account.discordRoles = roles;
       }
       return true;
@@ -89,20 +89,15 @@ export const authOptions: NextAuthOptions = {
     async session({ session, user }) {
       if (session.user) {
         session.user.id = user.id;
-        // @ts-expect-error - extend session type
         session.user.role = user.role || "user";
-        // @ts-expect-error - extend session type
         session.user.discordId = user.discordId;
-        // @ts-expect-error - extend session type
         session.user.staffRole = user.staffRole || "user";
       }
       return session;
     },
     async jwt({ token, account }) {
       if (account) {
-        // @ts-expect-error - extending token
         token.staffRole = account.staffRole || "user";
-        // @ts-expect-error - extending token
         token.discordRoles = account.discordRoles || [];
       }
       return token;
@@ -116,7 +111,6 @@ export const authOptions: NextAuthOptions = {
           await db.user.update({
             where: { id: user.id },
             data: {
-              // @ts-expect-error - extending user
               staffRole: account.staffRole || "user",
             },
           });

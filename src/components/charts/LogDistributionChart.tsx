@@ -60,7 +60,7 @@ export function LogDistributionChart({ data, loading }: LogDistributionChartProp
             borderRadius: '8px',
             color: '#fff',
           }}
-          formatter={(value: number) => [value.toLocaleString(), 'Events']}
+          formatter={(value) => [(value || 0).toLocaleString(), 'Events']}
         />
         <Legend
           verticalAlign="bottom"

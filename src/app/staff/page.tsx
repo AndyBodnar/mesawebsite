@@ -54,8 +54,8 @@ export default function StaffDashboard() {
       message: l.message,
       timestamp: l.createdAt,
       identifier: l.identifier,
-      level: l.category?.includes('error') ? 'error' :
-             l.category?.includes('warn') ? 'warning' : 'info',
+      level: (l.category?.includes('error') ? 'error' :
+             l.category?.includes('warn') ? 'warning' : 'info') as 'error' | 'warning' | 'info',
     }))
   }, [logsData])
 
@@ -126,7 +126,7 @@ export default function StaffDashboard() {
         />
         <StatsCard
           title="Total Logs Today"
-          value={logStats?.total?.toLocaleString() || '0'}
+          value={logStats?.totalLogs?.toLocaleString() || '0'}
           subtitle="Events recorded"
           icon={Activity}
           loading={loading}
@@ -134,7 +134,7 @@ export default function StaffDashboard() {
         />
         <StatsCard
           title="Active Warnings"
-          value={logStats?.warnings || 0}
+          value={logStats?.last24Hours || 0}
           subtitle="Pending review"
           icon={AlertTriangle}
           loading={loading}

@@ -62,6 +62,9 @@ export interface PlayerData {
 }
 
 export interface ServerInfo {
+  cpu?: number
+  memory?: number
+  avgPing?: number
   playerCount: number
   maxPlayers: number
   uptime: number
