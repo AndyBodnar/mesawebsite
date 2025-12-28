@@ -3,7 +3,6 @@ import DiscordProvider from "next-auth/providers/discord";
 import { Adapter, AdapterUser, AdapterAccount, AdapterSession } from "next-auth/adapters";
 import { db } from "./db";
 
-// Custom adapter - PrismaAdapter uses lowercase relation names but our schema uses PascalCase
 function CustomPrismaAdapter(): Adapter {
   return {
     createUser: async (data: Omit<AdapterUser, "id">) => {
@@ -28,16 +27,14 @@ function CustomPrismaAdapter(): Adapter {
       const user = await db.user.findUnique({ where: { email } });
       return user as AdapterUser | null;
     },
-    getUserByAccount: async ({ providerAccountId, provider }) => {
+    getUserByAccount: async ({ providerAccountId, provider }: { providerAccountId: string; provider: string }) => {
       const account = await db.account.findUnique({
-        where: {
-          provider_providerAccountId: { provider, providerAccountId },
-        },
+        where: { provider_providerAccountId: { provider, providerAccountId } },
         include: { User: true },
       });
       return (account?.User as AdapterUser) ?? null;
     },
-    updateUser: async (data) => {
+    updateUser: async (data: Partial<AdapterUser> & { id: string }) => {
       const user = await db.user.update({
         where: { id: data.id },
         data: { ...data, updatedAt: new Date() },
@@ -66,7 +63,7 @@ function CustomPrismaAdapter(): Adapter {
       });
       return data;
     },
-    unlinkAccount: async ({ providerAccountId, provider }) => {
+    unlinkAccount: async ({ providerAccountId, provider }: { providerAccountId: string; provider: string }) => {
       await db.account.delete({
         where: { provider_providerAccountId: { provider, providerAccountId } },
       });
@@ -91,7 +88,7 @@ function CustomPrismaAdapter(): Adapter {
       const { User, ...sessionData } = session;
       return { session: sessionData as AdapterSession, user: User as AdapterUser };
     },
-    updateSession: async (data) => {
+    updateSession: async (data: Partial<AdapterSession> & { sessionToken: string }) => {
       const session = await db.session.update({
         where: { sessionToken: data.sessionToken },
         data,
@@ -104,7 +101,6 @@ function CustomPrismaAdapter(): Adapter {
   };
 }
 
-// Role configuration
 const GUILD_ID = process.env.DISCORD_GUILD_ID || "";
 const OWNER_ROLE_IDS = (process.env.DISCORD_OWNER_ROLE_IDS || "").split(",").filter(Boolean);
 const ADMIN_ROLE_IDS = (process.env.DISCORD_ADMIN_ROLE_IDS || "").split(",").filter(Boolean);
@@ -112,34 +108,21 @@ const STAFF_ROLE_IDS = (process.env.DISCORD_STAFF_ROLE_IDS || "").split(",").fil
 
 export type StaffRole = "owner" | "admin" | "staff" | "user";
 
-// Fetch Discord guild member roles
 async function getDiscordRoles(accessToken: string): Promise<string[]> {
   if (!GUILD_ID) return [];
-
   try {
     const res = await fetch(
       `https://discord.com/api/v10/users/@me/guilds/${GUILD_ID}/member`,
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
+      { headers: { Authorization: `Bearer ${accessToken}` } }
     );
-
-    if (!res.ok) {
-      console.error("Failed to fetch guild member:", res.status);
-      return [];
-    }
-
+    if (!res.ok) return [];
     const member = await res.json();
     return member.roles || [];
-  } catch (error) {
-    console.error("Error fetching Discord roles:", error);
+  } catch {
     return [];
   }
 }
 
-// Determine staff role from Discord roles
 function determineStaffRole(discordRoles: string[]): StaffRole {
   if (OWNER_ROLE_IDS.some(id => discordRoles.includes(id))) return "owner";
   if (ADMIN_ROLE_IDS.some(id => discordRoles.includes(id))) return "admin";
@@ -154,9 +137,7 @@ export const authOptions: NextAuthOptions = {
       clientId: process.env.DISCORD_CLIENT_ID!,
       clientSecret: process.env.DISCORD_CLIENT_SECRET!,
       authorization: {
-        params: {
-          scope: "identify email guilds guilds.members.read",
-        },
+        params: { scope: "identify email guilds guilds.members.read" },
       },
       profile(profile) {
         return {
@@ -167,8 +148,8 @@ export const authOptions: NextAuthOptions = {
             ? `https://cdn.discordapp.com/avatars/${profile.id}/${profile.avatar}.${profile.avatar.startsWith("a_") ? "gif" : "png"}`
             : `https://cdn.discordapp.com/embed/avatars/${parseInt(profile.discriminator || "0") % 5}.png`,
           discordId: profile.id,
-          role: 'MEMBER' as const,
-          staffRole: 'user' as const,
+          role: "MEMBER" as const,
+          staffRole: "user" as const,
         };
       },
     }),
@@ -177,8 +158,7 @@ export const authOptions: NextAuthOptions = {
     async signIn({ account }) {
       if (account?.access_token && GUILD_ID) {
         const roles = await getDiscordRoles(account.access_token);
-        const staffRole = determineStaffRole(roles);
-        account.staffRole = staffRole;
+        account.staffRole = determineStaffRole(roles);
         account.discordRoles = roles;
       }
       return true;
@@ -192,13 +172,6 @@ export const authOptions: NextAuthOptions = {
       }
       return session;
     },
-    async jwt({ token, account }) {
-      if (account) {
-        token.staffRole = account.staffRole || "user";
-        token.discordRoles = account.discordRoles || [];
-      }
-      return token;
-    },
   },
   events: {
     async signIn({ user, account }) {
@@ -206,34 +179,24 @@ export const authOptions: NextAuthOptions = {
         try {
           await db.user.update({
             where: { id: user.id },
-            data: { staffRole: account.staffRole || "user" },
+            data: { staffRole: (account.staffRole as string) || "user" },
           });
-        } catch (error) {
-          console.log("Could not update staff role:", error);
-        }
+        } catch {}
       }
     },
   },
-  pages: {
-    signIn: "/login",
-    error: "/login",
-  },
-  session: {
-    strategy: "database",
-  },
+  pages: { signIn: "/login", error: "/login" },
+  session: { strategy: "database" },
 };
 
-// Helper to check if user has staff access
 export function hasStaffAccess(staffRole: StaffRole): boolean {
   return ["owner", "admin", "staff"].includes(staffRole);
 }
 
-// Helper to check if user has admin access
 export function hasAdminAccess(staffRole: StaffRole): boolean {
   return ["owner", "admin"].includes(staffRole);
 }
 
-// Helper to check if user is owner
 export function isOwner(staffRole: StaffRole): boolean {
   return staffRole === "owner";
 }
