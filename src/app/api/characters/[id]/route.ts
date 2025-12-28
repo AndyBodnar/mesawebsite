@@ -9,12 +9,15 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const character = await db.character.findUnique({
       where: { id },
       include: {
-        user: { select: { id: true, name: true, image: true } },
-        gallery: true,
-        relationships: {
-          include: { relatedCharacter: { select: { id: true, firstName: true, lastName: true, image: true } } },
+        User: { select: { id: true, name: true, image: true } },
+        CharacterGallery: true,
+        CharacterRelationship_CharacterRelationship_fromCharacterIdToCharacter: {
+          include: { 
+            Character_CharacterRelationship_toCharacterIdToCharacter: { 
+              select: { id: true, name: true, photoUrl: true } 
+            } 
+          },
         },
-        _count: { select: { likes: true } },
       },
     });
 
