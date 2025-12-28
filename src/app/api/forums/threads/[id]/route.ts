@@ -9,12 +9,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const thread = await db.forumThread.findUnique({
       where: { id },
       include: {
-        author: { select: { id: true, name: true, image: true, role: true, createdAt: true } },
-        category: { select: { id: true, name: true, slug: true } },
-        posts: {
+        User: { select: { id: true, name: true, image: true, role: true, createdAt: true } },
+        ForumCategory: { select: { id: true, name: true, slug: true } },
+        ForumPost: {
           include: {
-            author: { select: { id: true, name: true, image: true, role: true, createdAt: true } },
-            reactions: true,
+            User: { select: { id: true, name: true, image: true, role: true, createdAt: true } },
+            ForumReaction: true,
           },
           orderBy: { createdAt: "asc" },
         },
