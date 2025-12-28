@@ -66,7 +66,7 @@ export function Navbar() {
         <Link href="/" className="brand">
           <div className="logo" aria-hidden="true" />
           <div className="brandname">
-            <span className="bm font-signature">Black Mesa</span>
+            <span className="bm font-signature">Black <b className="mesa">Mesa</b></span>
             <span className="rp">RP</span>
           </div>
         </Link>

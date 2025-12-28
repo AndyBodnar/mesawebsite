@@ -1,5 +1,6 @@
 'use client'
 
+import './staff.css'
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -15,28 +16,27 @@ import {
   AlertTriangle,
   Menu,
   X,
-  ChevronRight,
   Loader2,
   LogIn,
+  Ban,
 } from 'lucide-react'
 
 type StaffRole = 'owner' | 'admin' | 'staff' | 'user'
 
 const navigation = [
-  { name: 'Dashboard', href: '/staff', icon: LayoutDashboard, minRole: 'staff' as StaffRole },
-  { name: 'Players', href: '/staff/players', icon: Users, minRole: 'staff' as StaffRole },
-  { name: 'Logs', href: '/staff/logs', icon: ScrollText, minRole: 'staff' as StaffRole },
-  { name: 'Live Map', href: '/staff/map', icon: Map, minRole: 'staff' as StaffRole },
-  { name: 'Bans & Warns', href: '/staff/moderation', icon: AlertTriangle, minRole: 'admin' as StaffRole },
-  { name: 'Server', href: '/staff/server', icon: Server, minRole: 'admin' as StaffRole },
-  { name: 'Admins', href: '/staff/admins', icon: Shield, minRole: 'owner' as StaffRole },
-  { name: 'Settings', href: '/staff/settings', icon: Settings, minRole: 'owner' as StaffRole },
+  { name: 'Dashboard', href: '/staff', icon: LayoutDashboard, code: '00', tag: 'LIVE', minRole: 'staff' as StaffRole },
+  { name: 'Players', href: '/staff/players', icon: Users, code: '01', tag: '64', minRole: 'staff' as StaffRole },
+  { name: 'Logs', href: '/staff/logs', icon: ScrollText, code: '02', tag: 'STREAM', minRole: 'staff' as StaffRole },
+  { name: 'Live Map', href: '/staff/map', icon: Map, code: '03', tag: 'GRID', minRole: 'staff' as StaffRole },
+  { name: 'Bans & Warns', href: '/staff/moderation', icon: Ban, code: '04', tag: 'QUEUE', minRole: 'admin' as StaffRole },
+  { name: 'Server', href: '/staff/server', icon: Server, code: '05', tag: 'CORE', minRole: 'admin' as StaffRole },
+  { name: 'Admins', href: '/staff/admins', icon: Shield, code: '06', tag: 'ACL', minRole: 'owner' as StaffRole },
+  { name: 'Settings', href: '/staff/settings', icon: Settings, code: '07', tag: 'OPS', minRole: 'owner' as StaffRole },
 ]
 
 const roleHierarchy: Record<StaffRole, number> = { user: 0, staff: 1, admin: 2, owner: 3 }
 const hasAccess = (userRole: StaffRole, minRole: StaffRole) => roleHierarchy[userRole] >= roleHierarchy[minRole]
-const getRoleLabel = (r: StaffRole) => ({ owner: 'Owner', admin: 'Admin', staff: 'Staff', user: 'User' }[r])
-const getRoleColor = (r: StaffRole) => ({ owner: 'text-yellow-400', admin: 'text-red-400', staff: 'text-blue-400', user: 'text-gray-400' }[r])
+const getRoleLabel = (r: StaffRole) => ({ owner: 'OWNER', admin: 'ADMIN', staff: 'STAFF', user: 'USER' }[r])
 
 export default function StaffLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -45,20 +45,20 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
 
   if (status === 'loading') {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+      <div className="staff-loading">
+        <Loader2 className="w-8 h-8 animate-spin" />
       </div>
     )
   }
 
   if (!session) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-        <div className="text-center max-w-md mx-4">
-          <Shield className="w-16 h-16 text-blue-500 mx-auto mb-6" />
-          <h1 className="text-2xl font-bold text-white mb-2">Staff Panel Access</h1>
-          <p className="text-gray-400 mb-6">Login with Discord to access the staff panel.</p>
-          <button onClick={() => signIn('discord')} className="flex items-center justify-center gap-2 w-full px-6 py-3 bg-[#5865F2] hover:bg-[#4752C4] text-white rounded-lg">
+      <div className="staff-loading">
+        <div className="staff-auth-card">
+          <Shield className="w-16 h-16 mx-auto mb-6" style={{ color: '#b1121c' }} />
+          <h1>Staff Panel Access</h1>
+          <p>Login with Discord to access the staff panel.</p>
+          <button onClick={() => signIn('discord')} className="staff-login-btn">
             <LogIn className="w-5 h-5" /> Login with Discord
           </button>
         </div>
@@ -70,12 +70,12 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
 
   if (!hasAccess(staffRole, 'staff')) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-        <div className="text-center max-w-md mx-4">
-          <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-6" />
-          <h1 className="text-2xl font-bold text-white mb-2">Access Denied</h1>
-          <p className="text-gray-400 mb-6">You need a staff role in Discord to access this panel.</p>
-          <Link href="/" className="inline-flex px-6 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-lg">Return Home</Link>
+      <div className="staff-loading">
+        <div className="staff-auth-card">
+          <AlertTriangle className="w-16 h-16 mx-auto mb-6" style={{ color: '#ff4455' }} />
+          <h1>Access Denied</h1>
+          <p>You need a staff role in Discord to access this panel.</p>
+          <Link href="/" className="staff-home-btn">Return Home</Link>
         </div>
       </div>
     )
@@ -84,48 +84,88 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
   const filteredNav = navigation.filter(item => hasAccess(staffRole, item.minRole))
 
   return (
-    <div className="min-h-screen bg-gray-950">
-      {sidebarOpen && <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setSidebarOpen(false)} />}
-      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 border-r border-gray-800 transform transition-transform lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
-        <div className="flex items-center justify-between h-16 px-4 border-b border-gray-800">
-          <Link href="/staff" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg" />
-            <span className="font-bold text-white">Staff Panel</span>
-          </Link>
-          <button className="lg:hidden text-gray-400" onClick={() => setSidebarOpen(false)}><X className="w-5 h-5" /></button>
+    <div className="staff-app">
+      <aside className="staff-rail">
+        <div className="staff-sigil" title="Black Mesa"><span>BM</span></div>
+        {filteredNav.slice(0, 4).map((item) => {
+          const isActive = pathname === item.href
+          return (
+            <Link key={item.href} href={item.href} className={`staff-railbtn ${isActive ? "active" : ""}`} title={item.name}>
+              <item.icon className="w-4 h-4" />
+            </Link>
+          )
+        })}
+        <div style={{ flex: 1 }} />
+        <div className="staff-dot" title="Secure link" />
+      </aside>
+
+      <aside className={`staff-side ${sidebarOpen ? "staff-side-open" : ""}`}>
+        <div className="staff-brand">
+          <div className="staff-brand-name">
+            <span className="glitch">Black</span> <b className="glitch" style={{ color: '#b1121c' }}>Mesa</b>
+          </div>
+          <div className="staff-brand-tag">STAFF NODE</div>
         </div>
-        <nav className="p-4 space-y-1">
+        <div className="staff-search">
+          <div className="staff-search-key">CTRL K</div>
+          <input placeholder="Command palette: ban, warn, restart..." />
+        </div>
+        <nav className="staff-menu">
           {filteredNav.map((item) => {
             const isActive = pathname === item.href
             return (
-              <Link key={item.name} href={item.href} className={`flex items-center gap-3 px-3 py-2 rounded-lg ${isActive ? "bg-blue-600 text-white" : "text-gray-400 hover:text-white hover:bg-gray-800"}`}>
-                <item.icon className="w-5 h-5" /><span>{item.name}</span>
-                {isActive && <ChevronRight className="w-4 h-4 ml-auto" />}
+              <Link key={item.href} href={item.href} className={`staff-menu-item ${isActive ? "active" : ""}`}>
+                <div className="staff-menu-left">
+                  <span className="staff-menu-code">{item.code}</span>
+                  {item.name}
+                </div>
+                <span className="staff-menu-tag">{item.tag}</span>
               </Link>
             )
           })}
         </nav>
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-800">
-          <div className="flex items-center gap-3">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-            <div><p className="text-sm font-medium text-white">Server Online</p></div>
+        <div className="staff-side-footer">
+          <div className="staff-identity">
+            <div className="staff-identity-info">
+              <div className="staff-identity-name">{session.user?.name}</div>
+              <div className="staff-identity-role">ROLE: {getRoleLabel(staffRole)}</div>
+            </div>
+            <div className="staff-identity-badge">
+              {session.user?.image ? (
+                <img src={session.user.image} alt="" className="w-full h-full rounded-xl object-cover" />
+              ) : 'BM'}
+            </div>
           </div>
         </div>
+        <button className="staff-side-close" onClick={() => setSidebarOpen(false)}>
+          <X className="w-5 h-5" />
+        </button>
       </aside>
-      <div className="lg:pl-64">
-        <header className="sticky top-0 z-30 flex items-center h-16 px-4 bg-gray-900/80 backdrop-blur-sm border-b border-gray-800">
-          <button className="lg:hidden text-gray-400 mr-4" onClick={() => setSidebarOpen(true)}><Menu className="w-6 h-6" /></button>
-          <div className="flex-1" />
-          <div className="flex items-center gap-4">
-            <div className="text-right">
-              <p className="text-sm font-medium text-white">{session.user?.name}</p>
-              <p className={`text-xs ${getRoleColor(staffRole)}`}>{getRoleLabel(staffRole)}</p>
-            </div>
-            {session.user?.image ? <img src={session.user.image} alt="" className="w-8 h-8 rounded-full" /> : <div className="w-8 h-8 bg-purple-500 rounded-full" />}
+
+      {sidebarOpen && <div className="staff-overlay" onClick={() => setSidebarOpen(false)} />}
+
+      <main className="staff-main">
+        <div className="staff-top">
+          <button className="staff-mobile-menu" onClick={() => setSidebarOpen(true)}>
+            <Menu className="w-5 h-5" />
+          </button>
+          <div className="staff-tabs">
+            {filteredNav.slice(0, 7).map((item) => {
+              const isActive = pathname === item.href
+              return (
+                <Link key={item.href} href={item.href} className={`staff-tab ${isActive ? "active" : ""}`}>
+                  {item.name}
+                </Link>
+              )
+            })}
           </div>
-        </header>
-        <main className="p-6">{children}</main>
-      </div>
+          <div className="staff-statusbar">
+            <div className="staff-chip"><span className="staff-chip-dot" /><b>SERVER</b> ONLINE</div>
+            <div className="staff-chip red">UPLINK <b>LINKED</b></div>
+          </div>
+        </div>
+        {children}
+      </main>
     </div>
   )
 }
