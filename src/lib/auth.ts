@@ -12,48 +12,69 @@ function CustomPrismaAdapter(): Adapter {
   return {
     ...prismaAdapter,
     createUser: async (data: Omit<AdapterUser, "id">) => {
-      const user = await db.user.create({
-        data: {
-          id: crypto.randomUUID(),
-          name: data.name,
-          email: data.email,
-          emailVerified: data.emailVerified,
-          image: data.image,
-          discordId: (data as any).discordId || (data as any).id,
-          updatedAt: new Date(),
-        },
-      });
-      return user as AdapterUser;
+      try {
+        console.log("[Auth] Creating user with data:", JSON.stringify(data, null, 2));
+        const user = await db.user.create({
+          data: {
+            id: crypto.randomUUID(),
+            name: data.name,
+            email: data.email,
+            emailVerified: data.emailVerified,
+            image: data.image,
+            discordId: (data as any).discordId || (data as any).id,
+            updatedAt: new Date(),
+          },
+        });
+        console.log("[Auth] User created:", user.id);
+        return user as AdapterUser;
+      } catch (error) {
+        console.error("[Auth] Failed to create user:", error);
+        throw error;
+      }
     },
     linkAccount: async (data: AdapterAccount) => {
-      await db.account.create({
-        data: {
-          id: crypto.randomUUID(),
-          userId: data.userId,
-          type: data.type,
-          provider: data.provider,
-          providerAccountId: data.providerAccountId,
-          refresh_token: data.refresh_token,
-          access_token: data.access_token,
-          expires_at: data.expires_at,
-          token_type: data.token_type,
-          scope: data.scope,
-          id_token: data.id_token,
-          session_state: data.session_state as string | null,
-        },
-      });
-      return data;
+      try {
+        console.log("[Auth] Linking account for user:", data.userId);
+        await db.account.create({
+          data: {
+            id: crypto.randomUUID(),
+            userId: data.userId,
+            type: data.type,
+            provider: data.provider,
+            providerAccountId: data.providerAccountId,
+            refresh_token: data.refresh_token,
+            access_token: data.access_token,
+            expires_at: data.expires_at,
+            token_type: data.token_type,
+            scope: data.scope,
+            id_token: data.id_token,
+            session_state: data.session_state as string | null,
+          },
+        });
+        console.log("[Auth] Account linked successfully");
+        return data;
+      } catch (error) {
+        console.error("[Auth] Failed to link account:", error);
+        throw error;
+      }
     },
     createSession: async (data: { sessionToken: string; userId: string; expires: Date }) => {
-      const session = await db.session.create({
-        data: {
-          id: crypto.randomUUID(),
-          sessionToken: data.sessionToken,
-          userId: data.userId,
-          expires: data.expires,
-        },
-      });
-      return session as AdapterSession;
+      try {
+        console.log("[Auth] Creating session for user:", data.userId);
+        const session = await db.session.create({
+          data: {
+            id: crypto.randomUUID(),
+            sessionToken: data.sessionToken,
+            userId: data.userId,
+            expires: data.expires,
+          },
+        });
+        console.log("[Auth] Session created:", session.id);
+        return session as AdapterSession;
+      } catch (error) {
+        console.error("[Auth] Failed to create session:", error);
+        throw error;
+      }
     },
   };
 }
@@ -71,7 +92,6 @@ async function getDiscordRoles(accessToken: string): Promise<string[]> {
   if (!GUILD_ID) return [];
 
   try {
-    // Fetch user's guild member data
     const res = await fetch(
       `https://discord.com/api/v10/users/@me/guilds/${GUILD_ID}/member`,
       {
@@ -104,6 +124,7 @@ function determineStaffRole(discordRoles: string[]): StaffRole {
 
 export const authOptions: NextAuthOptions = {
   adapter: CustomPrismaAdapter(),
+  debug: true,
   providers: [
     DiscordProvider({
       clientId: process.env.DISCORD_CLIENT_ID!,
@@ -114,13 +135,14 @@ export const authOptions: NextAuthOptions = {
         },
       },
       profile(profile) {
+        console.log("[Auth] Discord profile received:", profile.id, profile.username);
         return {
           id: profile.id,
           name: profile.username,
           email: profile.email,
           image: profile.avatar
             ? `https://cdn.discordapp.com/avatars/${profile.id}/${profile.avatar}.${profile.avatar.startsWith("a_") ? "gif" : "png"}`
-            : `https://cdn.discordapp.com/embed/avatars/${parseInt(profile.discriminator) % 5}.png`,
+            : `https://cdn.discordapp.com/embed/avatars/${parseInt(profile.discriminator || "0") % 5}.png`,
           discordId: profile.id,
           role: 'MEMBER' as const,
           staffRole: 'user' as const,
@@ -130,12 +152,10 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async signIn({ account }) {
-      // Check if user is in the guild and get their roles
+      console.log("[Auth] signIn callback triggered");
       if (account?.access_token && GUILD_ID) {
         const roles = await getDiscordRoles(account.access_token);
         const staffRole = determineStaffRole(roles);
-
-        // Store role in account for later use
         account.staffRole = staffRole;
         account.discordRoles = roles;
       }
@@ -160,7 +180,7 @@ export const authOptions: NextAuthOptions = {
   },
   events: {
     async signIn({ user, account }) {
-      // Update user's staff role in database on each login
+      console.log("[Auth] signIn event - updating staff role for user:", user.id);
       if (account && user.id) {
         try {
           await db.user.update({
@@ -170,7 +190,6 @@ export const authOptions: NextAuthOptions = {
             },
           });
         } catch (error) {
-          // User might not exist yet or field might not exist
           console.log("Could not update staff role:", error);
         }
       }
