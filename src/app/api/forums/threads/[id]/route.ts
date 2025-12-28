@@ -65,7 +65,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       if (data[field] !== undefined) updateData[field] = data[field];
     });
 
-    const updated = await db.forumThread.update({ where: { id }, data: updateData });
+    const updated = await db.forumThread.update({ where: { id }, data: { ...updateData, updatedAt: new Date() } });
     return NextResponse.json(updated);
   } catch (error) {
     console.error("Failed to update thread:", error);

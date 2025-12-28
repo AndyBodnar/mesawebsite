@@ -54,11 +54,13 @@ export async function POST(req: NextRequest) {
 
     const thread = await db.forumThread.create({
       data: {
+        id: crypto.randomUUID(),
         title,
         slug: `${slug}-${Date.now()}`,
         content,
         authorId: session.user.id,
         categoryId,
+        updatedAt: new Date(),
       },
       include: {
         User: { select: { id: true, name: true, image: true } },
