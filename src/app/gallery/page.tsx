@@ -69,8 +69,8 @@ export default function GalleryPage() {
     async function fetchGallery() {
       setLoading(true);
       try {
-        const typeParam = activeCategory !== "All" ?  : "";
-        const res = await fetch();
+        const typeParam = activeCategory !== "All" ? `&type=${activeCategory}` : "";
+        const res = await fetch(`/api/gallery?page=${pagination.page}&limit=20${typeParam}`);
         if (!res.ok) {
           throw new Error("Failed to load gallery");
         }
