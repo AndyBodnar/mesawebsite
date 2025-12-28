@@ -62,12 +62,27 @@ const quickLinks = [
   { icon: Map, label: "Live Map", href: "/map" },
 ];
 
-// Signature SVG Component with write animation
+// Signature SVG Component with sequential letter write animation
 function SignatureSVG() {
+  // Letters with their x positions (calculated for proper spacing)
+  const blackLetters = [
+    { char: 'B', x: 10 },
+    { char: 'l', x: 130 },
+    { char: 'a', x: 195 },
+    { char: 'c', x: 310 },
+    { char: 'k', x: 410 },
+  ];
+  const mesaLetters = [
+    { char: 'M', x: 560 },
+    { char: 'e', x: 730 },
+    { char: 's', x: 850 },
+    { char: 'a', x: 960 },
+  ];
+
   return (
     <svg
       className="w-full max-w-[760px] h-auto drop-shadow-[0_0_18px_rgba(255,255,255,0.10)]"
-      viewBox="0 0 1400 260"
+      viewBox="0 0 1100 260"
       role="img"
       aria-label="Black Mesa"
     >
@@ -78,28 +93,50 @@ function SignatureSVG() {
         </filter>
       </defs>
 
-      <text
-        x="10"
-        y="135"
-        filter="url(#rough)"
-        className="sig-text"
-        style={{
-          fontFamily: 'var(--font-marker), "Permanent Marker", cursive',
-          fontSize: '190px',
-          fontWeight: 400,
-          letterSpacing: '0.01em',
-          dominantBaseline: 'middle',
-        }}
-      >
-        Black Mesa
-      </text>
+      {/* Black letters - white fill */}
+      {blackLetters.map((letter, i) => (
+        <text
+          key={`black-${i}`}
+          x={letter.x}
+          y="160"
+          filter="url(#rough)"
+          className={`sig-letter sig-letter-${i}`}
+          style={{
+            fontFamily: 'var(--font-marker), "Permanent Marker", cursive',
+            fontSize: '190px',
+            fontWeight: 400,
+            dominantBaseline: 'middle',
+          }}
+        >
+          {letter.char}
+        </text>
+      ))}
+
+      {/* Mesa letters - red fill */}
+      {mesaLetters.map((letter, i) => (
+        <text
+          key={`mesa-${i}`}
+          x={letter.x}
+          y="160"
+          filter="url(#rough)"
+          className={`sig-letter sig-letter-mesa sig-letter-${i + 5}`}
+          style={{
+            fontFamily: 'var(--font-marker), "Permanent Marker", cursive',
+            fontSize: '190px',
+            fontWeight: 400,
+            dominantBaseline: 'middle',
+          }}
+        >
+          {letter.char}
+        </text>
+      ))}
 
       {/* Ink splatter */}
       <g className="splatter" style={{ filter: 'drop-shadow(0 0 14px rgba(255,255,255,0.10))' }}>
-        <circle cx="260" cy="210" r="7" fill="rgba(245,247,255,0.92)" />
-        <circle cx="300" cy="228" r="4" fill="rgba(245,247,255,0.75)" />
-        <circle cx="650" cy="220" r="6" fill="rgba(245,247,255,0.85)" />
-        <circle cx="930" cy="230" r="3.5" fill="rgba(245,247,255,0.7)" />
+        <circle cx="200" cy="210" r="7" fill="rgba(245,247,255,0.92)" />
+        <circle cx="240" cy="228" r="4" fill="rgba(245,247,255,0.75)" />
+        <circle cx="550" cy="220" r="6" fill="#b1121c" />
+        <circle cx="800" cy="230" r="3.5" fill="#b1121c" />
       </g>
     </svg>
   );

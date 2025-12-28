@@ -906,30 +906,51 @@ body::after {
     100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
   }
 
-  /* Signature animation classes */
-  .sig-text {
+  /* Signature animation classes - Sequential letter animation */
+  .sig-letter {
     fill: rgba(245, 247, 255, 0);
     stroke: rgba(245, 247, 255, 0.94);
     stroke-width: 2;
     stroke-linecap: round;
     stroke-linejoin: round;
     paint-order: stroke;
-    stroke-dasharray: 2200;
-    stroke-dashoffset: 2200;
-    animation: write 1.9s ease forwards, fillIn 0.55s ease 1.75s forwards;
+    stroke-dasharray: 600;
+    stroke-dashoffset: 600;
   }
 
-  @keyframes write {
+  /* Staggered delays for each letter - Black (0-4) */
+  .sig-letter-0 { animation: writeLetter 0.35s ease forwards, fillWhite 0.25s ease 0.3s forwards; }
+  .sig-letter-1 { animation: writeLetter 0.35s ease 0.15s forwards, fillWhite 0.25s ease 0.45s forwards; }
+  .sig-letter-2 { animation: writeLetter 0.35s ease 0.30s forwards, fillWhite 0.25s ease 0.60s forwards; }
+  .sig-letter-3 { animation: writeLetter 0.35s ease 0.45s forwards, fillWhite 0.25s ease 0.75s forwards; }
+  .sig-letter-4 { animation: writeLetter 0.35s ease 0.60s forwards, fillWhite 0.25s ease 0.90s forwards; }
+
+  /* Mesa letters (5-8) - red fill */
+  .sig-letter-5 { animation: writeLetter 0.35s ease 0.85s forwards, fillRed 0.25s ease 1.15s forwards; }
+  .sig-letter-6 { animation: writeLetter 0.35s ease 1.00s forwards, fillRed 0.25s ease 1.30s forwards; }
+  .sig-letter-7 { animation: writeLetter 0.35s ease 1.15s forwards, fillRed 0.25s ease 1.45s forwards; }
+  .sig-letter-8 { animation: writeLetter 0.35s ease 1.30s forwards, fillRed 0.25s ease 1.60s forwards; }
+
+  /* Mesa stroke color - red */
+  .sig-letter-mesa {
+    stroke: #b1121c;
+  }
+
+  @keyframes writeLetter {
     to { stroke-dashoffset: 0; }
   }
 
-  @keyframes fillIn {
+  @keyframes fillWhite {
     to { fill: rgba(245, 247, 255, 0.92); }
+  }
+
+  @keyframes fillRed {
+    to { fill: #b1121c; }
   }
 
   .splatter {
     opacity: 0;
-    animation: splat 0.25s ease 1.75s forwards;
+    animation: splat 0.25s ease 1.85s forwards;
   }
 
   @keyframes splat {
