@@ -18,8 +18,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
 
     const { content } = await req.json();
     const comment = await db.newsComment.create({
-      data: { content, articleId: article.id, authorId: session.user.id },
-      include: { author: { select: { id: true, name: true, image: true } } },
+      data: {
+        id: crypto.randomUUID(),
+        content,
+        articleId: article.id,
+        authorId: session.user.id,
+        updatedAt: new Date(),
+      },
+      include: { User: { select: { id: true, name: true, image: true } } },
     });
 
     return NextResponse.json(comment, { status: 201 });
