@@ -14,8 +14,10 @@ const HISTORY_INTERVAL = 5 * 60 * 1000 // Record every 5 minutes
 
 export function recordPlayerCount(count: number) {
   const now = Date.now()
-  // Only record if 5 minutes have passed since last record
-  if (now - lastHistoryRecord < HISTORY_INTERVAL) return
+  
+  // Always record immediately on first call, then every 5 minutes after
+  const isFirstRecord = lastHistoryRecord === 0
+  if (!isFirstRecord && now - lastHistoryRecord < HISTORY_INTERVAL) return
 
   const date = new Date(now)
   const timeStr = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })

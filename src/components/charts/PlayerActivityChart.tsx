@@ -17,7 +17,8 @@ interface PlayerActivityChartProps {
 }
 
 export function PlayerActivityChart({ data, loading }: PlayerActivityChartProps) {
-  const hasData = data && data.length > 0 && data.some(d => d.players > 0)
+  // Show chart if we have any data points (even if all zeros)
+  const hasData = data && data.length > 0
 
   if (loading) {
     return (
