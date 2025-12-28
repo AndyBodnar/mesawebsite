@@ -1,0 +1,53 @@
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+
+export async function GET(req: NextRequest, { params }: { params: { slug: string } }) {
+  try {
+    const article = await db.newsArticle.findUnique({
+      where: { slug: params.slug },
+      include: {
+        author: { select: { id: true, name: true, image: true, role: true } },
+        comments: {
+          include: {
+            author: { select: { id: true, name: true, image: true } },
+          },
+          orderBy: { createdAt: "desc" },
+        },
+        _count: { select: { comments: true } },
+      },
+    });
+
+    if (!article) {
+      return NextResponse.json({ error: "Article not found" }, { status: 404 });
+    }
+
+    // Increment views
+    await db.newsArticle.update({
+      where: { id: article.id },
+      data: { views: { increment: 1 } },
+    });
+
+    return NextResponse.json(article);
+  } catch (error) {
+    console.error("Failed to fetch article:", error);
+    return NextResponse.json({ error: "Failed to fetch article" }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest, { params }: { params: { slug: string } }) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user || !["ADMIN", "SUPERADMIN"].includes(session.user.role)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    await db.newsArticle.delete({ where: { slug: params.slug } });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Failed to delete article:", error);
+    return NextResponse.json({ error: "Failed to delete article" }, { status: 500 });
+  }
+}

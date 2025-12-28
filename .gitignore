@@ -1,6 +1,4 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
-# dependencies
+# Dependencies
 /node_modules
 /.pnp
 .pnp.*
@@ -10,32 +8,66 @@
 !.yarn/releases
 !.yarn/versions
 
-# testing
+# Testing
 /coverage
 
-# next.js
+# Next.js
 /.next/
 /out/
 
-# production
+# Production
 /build
 
-# misc
+# Misc
 .DS_Store
 *.pem
+Thumbs.db
 
-# debug
+# Debug logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# ===========================================
+# SENSITIVE - NEVER COMMIT
+# ===========================================
+.env
+.env.*
+.env.local
+.env.development
+.env.production
+*.env
 
-# vercel
+# Prisma generated
+/src/generated/prisma
+/prisma/*.db
+/prisma/*.db-journal
+
+# Vercel
 .vercel
 
-# typescript
+# TypeScript
 *.tsbuildinfo
 next-env.d.ts
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+logs/
+*.log
+
+# Debug images (test files)
+public/debug_*.jpg
+public/test_*.jpg
+
+# Credentials & secrets
+*.key
+*.p12
+*.pfx
+credentials.json
+service-account.json

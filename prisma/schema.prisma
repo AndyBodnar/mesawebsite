@@ -1,0 +1,627 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id                String  @id
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  User              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Application {
+  id                  String              @id
+  status              Application_status  @default(PENDING)
+  responses           String              @db.LongText
+  reviewNotes         String?             @db.Text
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime
+  templateId          String
+  userId              String
+  ApplicationTemplate ApplicationTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  User                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ApplicationVote     ApplicationVote[]
+
+  @@index([status])
+  @@index([templateId])
+  @@index([userId])
+}
+
+model ApplicationTemplate {
+  id          String        @id
+  name        String
+  slug        String        @unique
+  type        String
+  fields      String        @db.LongText
+  active      Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime
+  Application Application[]
+}
+
+model ApplicationVote {
+  id            String      @id
+  vote          String
+  comment       String?     @db.Text
+  createdAt     DateTime    @default(now())
+  applicationId String
+  staffId       String
+  Application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  User          User        @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@unique([applicationId, staffId])
+  @@index([applicationId])
+  @@index([staffId])
+}
+
+model AuditLog {
+  id         String   @id
+  action     String
+  targetType String?
+  targetId   String?
+  details    String?  @db.LongText
+  createdAt  DateTime @default(now())
+  userId     String
+  User       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([action])
+  @@index([createdAt])
+  @@index([userId])
+}
+
+model Character {
+  id                                                                     String                  @id
+  citizenId                                                              String?                 @unique
+  name                                                                   String
+  dateOfBirth                                                            DateTime?
+  gender                                                                 String?
+  description                                                            String?                 @db.Text
+  photoUrl                                                               String?
+  backstory                                                              String?                 @db.LongText
+  status                                                                 Character_status        @default(ALIVE)
+  faction                                                                String?
+  occupation                                                             String?
+  isPublic                                                               Boolean                 @default(true)
+  createdAt                                                              DateTime                @default(now())
+  updatedAt                                                              DateTime
+  userId                                                                 String
+  User                                                                   User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  CharacterEvent                                                         CharacterEvent[]
+  CharacterGallery                                                       CharacterGallery[]
+  CharacterRelationship_CharacterRelationship_fromCharacterIdToCharacter CharacterRelationship[] @relation("CharacterRelationship_fromCharacterIdToCharacter")
+  CharacterRelationship_CharacterRelationship_toCharacterIdToCharacter   CharacterRelationship[] @relation("CharacterRelationship_toCharacterIdToCharacter")
+  OrganizationMember                                                     OrganizationMember[]
+
+  @@index([citizenId])
+  @@index([userId])
+}
+
+model CharacterEvent {
+  id          String    @id
+  title       String
+  description String?   @db.Text
+  date        DateTime
+  type        String
+  createdAt   DateTime  @default(now())
+  characterId String
+  Character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@index([characterId])
+}
+
+model CharacterGallery {
+  id          String    @id
+  imageUrl    String
+  caption     String?
+  createdAt   DateTime  @default(now())
+  characterId String
+  Character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@index([characterId])
+}
+
+model CharacterRelationship {
+  id                                                         String    @id
+  relationshipType                                           String
+  description                                                String?   @db.Text
+  createdAt                                                  DateTime  @default(now())
+  fromCharacterId                                            String
+  toCharacterId                                              String
+  Character_CharacterRelationship_fromCharacterIdToCharacter Character @relation("CharacterRelationship_fromCharacterIdToCharacter", fields: [fromCharacterId], references: [id], onDelete: Cascade)
+  Character_CharacterRelationship_toCharacterIdToCharacter   Character @relation("CharacterRelationship_toCharacterIdToCharacter", fields: [toCharacterId], references: [id], onDelete: Cascade)
+
+  @@unique([fromCharacterId, toCharacterId])
+  @@index([fromCharacterId])
+  @@index([toCharacterId])
+}
+
+model Event {
+  id           String      @id
+  title        String
+  description  String      @db.Text
+  location     String?
+  type         String
+  startTime    DateTime
+  endTime      DateTime?
+  recurring    String?
+  maxAttendees Int?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime
+  authorId     String
+  User         User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  EventRsvp    EventRsvp[]
+
+  @@index([authorId])
+  @@index([startTime])
+}
+
+model EventRsvp {
+  id        String   @id
+  status    String
+  createdAt DateTime @default(now())
+  eventId   String
+  userId    String
+  Event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+  @@index([eventId])
+  @@index([userId])
+}
+
+model ForumCategory {
+  id          String        @id
+  name        String
+  slug        String        @unique
+  description String?       @db.Text
+  order       Int           @default(0)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime
+  ForumThread ForumThread[]
+}
+
+model ForumPost {
+  id            String          @id
+  content       String          @db.Text
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime
+  threadId      String
+  authorId      String
+  User          User            @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  ForumThread   ForumThread     @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  ForumReaction ForumReaction[]
+
+  @@index([authorId])
+  @@index([threadId])
+}
+
+model ForumReaction {
+  id        String    @id
+  type      String
+  createdAt DateTime  @default(now())
+  postId    String
+  userId    String
+  ForumPost ForumPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  User      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId, type])
+  @@index([postId])
+  @@index([userId])
+}
+
+model ForumThread {
+  id            String        @id
+  title         String
+  slug          String
+  content       String        @db.Text
+  pinned        Boolean       @default(false)
+  locked        Boolean       @default(false)
+  views         Int           @default(0)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime
+  categoryId    String
+  authorId      String
+  ForumPost     ForumPost[]
+  User          User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  ForumCategory ForumCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([categoryId, slug])
+  @@index([authorId])
+  @@index([categoryId])
+}
+
+model GalleryAlbum {
+  id          String        @id
+  title       String
+  description String?       @db.Text
+  visibility  String        @default("public")
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime
+  userId      String
+  User        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  GalleryItem GalleryItem[]
+
+  @@index([userId])
+}
+
+model GalleryComment {
+  id          String      @id
+  content     String      @db.Text
+  createdAt   DateTime    @default(now())
+  itemId      String
+  userId      String
+  GalleryItem GalleryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  User        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([itemId])
+  @@index([userId])
+}
+
+model GalleryItem {
+  id             String           @id
+  type           String
+  url            String
+  caption        String?
+  approved       Boolean          @default(false)
+  featured       Boolean          @default(false)
+  likes          Int              @default(0)
+  createdAt      DateTime         @default(now())
+  albumId        String?
+  userId         String
+  GalleryComment GalleryComment[]
+  GalleryAlbum   GalleryAlbum?    @relation(fields: [albumId], references: [id])
+  User           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([albumId])
+  @@index([approved])
+  @@index([userId])
+}
+
+model GameLog {
+  id         String   @id
+  script     String
+  category   String
+  title      String
+  message    String   @db.Text
+  color      Int?
+  playerId   String?
+  playerName String?
+  identifier String?
+  metadata   String?  @db.LongText
+  createdAt  DateTime @default(now())
+
+  @@index([category])
+  @@index([createdAt])
+  @@index([identifier])
+  @@index([script])
+}
+
+model NewsArticle {
+  id          String        @id
+  title       String
+  slug        String        @unique
+  content     String        @db.LongText
+  excerpt     String?       @db.Text
+  coverImage  String?
+  category    String        @default("news")
+  featured    Boolean       @default(false)
+  published   Boolean       @default(false)
+  publishedAt DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime
+  authorId    String
+  User        User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  NewsComment NewsComment[]
+
+  @@index([authorId])
+  @@index([publishedAt])
+}
+
+model NewsComment {
+  id          String      @id
+  content     String      @db.Text
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime
+  articleId   String
+  authorId    String
+  NewsArticle NewsArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  User        User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([articleId])
+  @@index([authorId])
+}
+
+model Notification {
+  id        String   @id
+  type      String
+  title     String
+  content   String?  @db.Text
+  link      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  userId    String
+  User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([read])
+  @@index([userId])
+}
+
+model Organization {
+  id                 String               @id
+  name               String
+  slug               String               @unique
+  type               String
+  logoUrl            String?
+  description        String?              @db.Text
+  territory          String?
+  recruitmentStatus  String               @default("closed")
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime
+  leaderId           String
+  User               User                 @relation(fields: [leaderId], references: [id], onDelete: Cascade)
+  OrganizationMember OrganizationMember[]
+
+  @@index([leaderId])
+  @@index([type])
+}
+
+model OrganizationMember {
+  id           String       @id
+  role         String       @default("member")
+  joinedAt     DateTime     @default(now())
+  orgId        String
+  characterId  String
+  userId       String?
+  Character    Character    @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  Organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  User         User?        @relation(fields: [userId], references: [id])
+
+  @@unique([orgId, characterId])
+  @@index([characterId])
+  @@index([orgId])
+  @@index([userId], map: "OrganizationMember_userId_fkey")
+}
+
+model Session {
+  id           String   @id
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  User         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model StoreOrder {
+  id         String   @id
+  tebexTxnId String   @unique
+  items      String   @db.LongText
+  total      Decimal  @db.Decimal(10, 2)
+  currency   String   @default("USD")
+  status     String   @default("completed")
+  createdAt  DateTime @default(now())
+  userId     String?
+
+  @@index([tebexTxnId])
+  @@index([userId])
+}
+
+model Suggestion {
+  id             String            @id
+  category       String
+  title          String
+  description    String            @db.Text
+  status         Suggestion_status @default(NEW)
+  staffResponse  String?           @db.Text
+  upvotes        Int               @default(0)
+  downvotes      Int               @default(0)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime
+  userId         String
+  User           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  SuggestionVote SuggestionVote[]
+
+  @@index([status])
+  @@index([userId])
+}
+
+model SuggestionVote {
+  id           String     @id
+  vote         Int
+  createdAt    DateTime   @default(now())
+  suggestionId String
+  userId       String
+  Suggestion   Suggestion @relation(fields: [suggestionId], references: [id], onDelete: Cascade)
+  User         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([suggestionId, userId])
+  @@index([suggestionId])
+  @@index([userId])
+}
+
+model Ticket {
+  id                             String          @id
+  type                           String
+  priority                       Ticket_priority @default(MEDIUM)
+  subject                        String
+  status                         Ticket_status   @default(OPEN)
+  createdAt                      DateTime        @default(now())
+  updatedAt                      DateTime
+  closedAt                       DateTime?
+  userId                         String
+  assignedToId                   String?
+  User_Ticket_assignedToIdToUser User?           @relation("Ticket_assignedToIdToUser", fields: [assignedToId], references: [id])
+  User_Ticket_userIdToUser       User            @relation("Ticket_userIdToUser", fields: [userId], references: [id], onDelete: Cascade)
+  TicketMessage                  TicketMessage[]
+  TicketRating                   TicketRating?
+
+  @@index([assignedToId])
+  @@index([status])
+  @@index([userId])
+}
+
+model TicketMessage {
+  id         String   @id
+  content    String   @db.Text
+  isInternal Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  ticketId   String
+  userId     String
+  Ticket     Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  User       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+  @@index([userId])
+}
+
+model TicketRating {
+  id        String   @id
+  rating    Int
+  feedback  String?  @db.Text
+  createdAt DateTime @default(now())
+  ticketId  String   @unique
+  Ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id                                       String               @id
+  name                                     String?
+  email                                    String?              @unique
+  emailVerified                            DateTime?
+  image                                    String?
+  discordId                                String?              @unique
+  role                                     User_role            @default(MEMBER)
+  staffRole                                String?              @default("user")
+  bio                                      String?              @db.Text
+  createdAt                                DateTime             @default(now())
+  updatedAt                                DateTime
+  Account                                  Account[]
+  Application                              Application[]
+  ApplicationVote                          ApplicationVote[]
+  AuditLog                                 AuditLog[]
+  Character                                Character[]
+  Event                                    Event[]
+  EventRsvp                                EventRsvp[]
+  ForumPost                                ForumPost[]
+  ForumReaction                            ForumReaction[]
+  ForumThread                              ForumThread[]
+  GalleryAlbum                             GalleryAlbum[]
+  GalleryComment                           GalleryComment[]
+  GalleryItem                              GalleryItem[]
+  NewsArticle                              NewsArticle[]
+  NewsComment                              NewsComment[]
+  Notification                             Notification[]
+  Organization                             Organization[]
+  OrganizationMember                       OrganizationMember[]
+  Session                                  Session[]
+  Suggestion                               Suggestion[]
+  SuggestionVote                           SuggestionVote[]
+  Ticket_Ticket_assignedToIdToUser         Ticket[]             @relation("Ticket_assignedToIdToUser")
+  Ticket_Ticket_userIdToUser               Ticket[]             @relation("Ticket_userIdToUser")
+  TicketMessage                            TicketMessage[]
+  UserBan_UserBan_issuedByIdToUser         UserBan[]            @relation("UserBan_issuedByIdToUser")
+  UserBan_UserBan_userIdToUser             UserBan[]            @relation("UserBan_userIdToUser")
+  UserWarning_UserWarning_issuedByIdToUser UserWarning[]        @relation("UserWarning_issuedByIdToUser")
+  UserWarning_UserWarning_userIdToUser     UserWarning[]        @relation("UserWarning_userIdToUser")
+
+  @@index([discordId])
+}
+
+model UserBan {
+  id                            String    @id
+  reason                        String    @db.Text
+  expiresAt                     DateTime?
+  createdAt                     DateTime  @default(now())
+  userId                        String
+  issuedById                    String
+  User_UserBan_issuedByIdToUser User      @relation("UserBan_issuedByIdToUser", fields: [issuedById], references: [id], onDelete: Cascade)
+  User_UserBan_userIdToUser     User      @relation("UserBan_userIdToUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([issuedById])
+  @@index([userId])
+}
+
+model UserWarning {
+  id                                String   @id
+  reason                            String   @db.Text
+  createdAt                         DateTime @default(now())
+  userId                            String
+  issuedById                        String
+  User_UserWarning_issuedByIdToUser User     @relation("UserWarning_issuedByIdToUser", fields: [issuedById], references: [id], onDelete: Cascade)
+  User_UserWarning_userIdToUser     User     @relation("UserWarning_userIdToUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([issuedById])
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+enum Application_status {
+  PENDING
+  UNDER_REVIEW
+  INTERVIEW
+  ACCEPTED
+  DENIED
+}
+
+enum Ticket_priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum Ticket_status {
+  OPEN
+  IN_PROGRESS
+  WAITING_RESPONSE
+  RESOLVED
+  CLOSED
+}
+
+enum Suggestion_status {
+  NEW
+  UNDER_REVIEW
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  DECLINED
+}
+
+enum User_role {
+  MEMBER
+  VIP
+  MODERATOR
+  ADMIN
+  SUPERADMIN
+}
+
+enum Character_status {
+  ALIVE
+  DECEASED
+  MISSING
+  RETIRED
+}

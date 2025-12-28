@@ -1,0 +1,36 @@
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+
+export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user || !["ADMIN", "SUPERADMIN", "MODERATOR"].includes(session.user.role)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { status, feedback } = await req.json();
+
+    if (!["APPROVED", "DENIED"].includes(status)) {
+      return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+    }
+
+    const application = await db.application.update({
+      where: { id: params.id },
+      data: {
+        status,
+        feedback,
+        reviewerId: session.user.id,
+        reviewedAt: new Date(),
+      },
+    });
+
+    // TODO: Send notification to user
+
+    return NextResponse.json(application);
+  } catch (error) {
+    console.error("Failed to review application:", error);
+    return NextResponse.json({ error: "Failed to review application" }, { status: 500 });
+  }
+}
