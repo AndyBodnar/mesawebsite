@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
-import { Maximize2, RefreshCw, Shield, Siren, Users, Briefcase, Wrench, WifiOff } from "lucide-react";
+import { Maximize2, Minimize2, RefreshCw, Shield, Siren, Users, Briefcase, Wrench, WifiOff } from "lucide-react";
 import type { RoleStats } from "@/components/map/gtav-map";
 import { useMapPlayers, useServerInfo } from "@/hooks";
 
@@ -42,12 +42,23 @@ export default function MapPage() {
   const players = mapData?.players ?? [];
   const { data: serverInfo } = useServerInfo();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const mapPanelRef = useRef<HTMLElement>(null);
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
     await refresh();
     setTimeout(() => setIsRefreshing(false), 500);
   }, [refresh]);
+
+  const toggleFullscreen = useCallback(() => {
+    if (!mapPanelRef.current) return;
+    if (!document.fullscreenElement) {
+      mapPanelRef.current.requestFullscreen().then(() => setIsFullscreen(true)).catch(console.error);
+    } else {
+      document.exitFullscreen().then(() => setIsFullscreen(false)).catch(console.error);
+    }
+  }, []);
 
   // Calculate role stats from real player data
   const roleStats: RoleStats[] = useMemo(() => {
@@ -226,14 +237,15 @@ export default function MapPage() {
                 <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
                 Refresh
               </button>
-              <button className="btn" type="button">
-                <Maximize2 className="h-4 w-4" />
-                Full View
+              <button className="btn" type="button" onClick={toggleFullscreen}>
+                {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                {isFullscreen ? "Exit" : "Full View"}
               </button>
             </div>
           </div>
 
           <motion.section
+            ref={mapPanelRef}
             className="panel map-panel"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
