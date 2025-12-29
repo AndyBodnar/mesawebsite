@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { writeFile, mkdir } from "fs/promises";
-import { join } from "path";
-import { existsSync } from "fs";
+import { put } from "@vercel/blob";
 
 export async function POST(req: NextRequest) {
   try {
@@ -35,24 +33,14 @@ export async function POST(req: NextRequest) {
     const timestamp = Date.now();
     const randomStr = Math.random().toString(36).substring(2, 8);
     const ext = file.name.split(".").pop() || "bin";
-    const filename = `${timestamp}-${randomStr}.${ext}`;
+    const filename = `gallery/${timestamp}-${randomStr}.${ext}`;
 
-    // Ensure upload directory exists
-    const uploadDir = join(process.cwd(), "public", "uploads", "gallery");
-    if (!existsSync(uploadDir)) {
-      await mkdir(uploadDir, { recursive: true });
-    }
+    // Upload to Vercel Blob storage
+    const blob = await put(filename, file, {
+      access: "public",
+    });
 
-    // Write file
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    const filepath = join(uploadDir, filename);
-    await writeFile(filepath, buffer);
-
-    // Return the public URL
-    const url = `/uploads/gallery/${filename}`;
-
-    return NextResponse.json({ url, filename }, { status: 201 });
+    return NextResponse.json({ url: blob.url, filename: blob.pathname }, { status: 201 });
   } catch (error) {
     console.error("Upload failed:", error);
     return NextResponse.json({ error: "Upload failed" }, { status: 500 });
