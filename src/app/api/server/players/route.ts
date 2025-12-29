@@ -27,7 +27,7 @@ export async function GET() {
     }));
 
     return NextResponse.json(formatted);
-  } catch (error) {
+  } catch {
     return NextResponse.json([]);
   }
 }

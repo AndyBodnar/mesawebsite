@@ -1,5 +1,7 @@
 "use client";
 
+import React from "react";
+
 import { useEffect, useMemo, useState } from "react";
 import { MapContainer, ImageOverlay, useMap, Circle } from "react-leaflet";
 import L from "leaflet";
@@ -85,34 +87,59 @@ function calculateHeatPoints(players: PlayerPosition[]): HeatPoint[] {
   }));
 }
 
-// Component to render heatmap circles with pulsing effect
+// Component to render heatmap with smooth radial gradient effect
 function HeatmapLayer({ players }: { players: PlayerPosition[] }) {
   const heatPoints = useMemo(() => calculateHeatPoints(players), [players]);
 
   if (heatPoints.length === 0) return null;
 
+  // Render concentric circles to create radial gradient effect
   return (
     <>
       {heatPoints.map((point, i) => {
         const coords = gtaToLeaflet(point.x, point.y);
-        // Radius scales with player count (200 base + 150 per player)
-        const radius = 200 + (point.count * 150);
-        // Higher opacity - 0.5 to 0.8
-        const opacity = 0.5 + (point.intensity * 0.3);
+        // Base radius scales with intensity (300 base + 200 per player count)
+        const baseRadius = 300 + (point.count * 200);
+        // Opacity based on intensity (0.4 to 0.8)
+        const baseOpacity = 0.4 + (point.intensity * 0.4);
 
+        // Create 3 concentric circles for gradient effect (outer to inner)
         return (
-          <Circle
-            key={i}
-            center={coords}
-            radius={radius}
-            pathOptions={{
-              color: "rgba(220, 38, 38, 0.3)",
-              weight: 2,
-              fillColor: "#dc2626",
-              fillOpacity: opacity,
-              className: "heat-pulse",
-            }}
-          />
+          <React.Fragment key={i}>
+            {/* Outer ring - 100% radius, lowest opacity */}
+            <Circle
+              center={coords}
+              radius={baseRadius}
+              pathOptions={{
+                color: "transparent",
+                weight: 0,
+                fillColor: "#dc2626",
+                fillOpacity: baseOpacity * 0.15,
+              }}
+            />
+            {/* Middle ring - 60% radius, medium opacity */}
+            <Circle
+              center={coords}
+              radius={baseRadius * 0.6}
+              pathOptions={{
+                color: "transparent",
+                weight: 0,
+                fillColor: "#dc2626",
+                fillOpacity: baseOpacity * 0.35,
+              }}
+            />
+            {/* Inner core - 30% radius, highest opacity */}
+            <Circle
+              center={coords}
+              radius={baseRadius * 0.3}
+              pathOptions={{
+                color: "transparent",
+                weight: 0,
+                fillColor: "#dc2626",
+                fillOpacity: baseOpacity * 0.6,
+              }}
+            />
+          </React.Fragment>
         );
       })}
     </>

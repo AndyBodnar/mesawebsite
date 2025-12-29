@@ -31,7 +31,7 @@ export async function GET() {
       serverName: serverInfo.vars?.sv_projectName || "Black Mesa RP",
       uptime: serverInfo.vars?.Uptime || "Unknown",
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json({
       online: false,
       players: 0,

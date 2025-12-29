@@ -15,7 +15,8 @@ export async function GET() {
       orderBy: { order: "asc" },
     });
 
-    const formatted = categories.map((cat) => ({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const formatted = categories.map((cat: any) => ({
       id: cat.id,
       name: cat.name,
       slug: cat.slug,

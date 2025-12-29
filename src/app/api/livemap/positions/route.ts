@@ -14,7 +14,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const { secret, players, serverTime } = await req.json();
+    const { secret, players } = await req.json();
 
     // Validate secret from FiveM server
     if (secret !== process.env.FIVEM_API_SECRET) {

@@ -3,10 +3,9 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Clock, MessageSquare, Plus, Loader2, AlertCircle, Inbox } from "lucide-react";
+import { Plus, Loader2, AlertCircle, Inbox, Search, Filter } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { StaggerContainer, StaggerItem } from "@/components/ui/motion";
-import { formatDistanceToNow } from "date-fns";
+import { TicketCard } from "@/components/tickets";
 
 interface TicketUser {
   id: string;
@@ -22,265 +21,88 @@ interface Ticket {
   status: "OPEN" | "IN_PROGRESS" | "WAITING_RESPONSE" | "RESOLVED" | "CLOSED";
   createdAt: string;
   updatedAt: string;
-  closedAt: string | null;
-  userId: string;
-  assignedToId: string | null;
   User_Ticket_userIdToUser: TicketUser;
   User_Ticket_assignedToIdToUser: TicketUser | null;
   _count: { TicketMessage: number };
 }
 
-const statusMap: Record<string, string> = {
-  OPEN: "Open",
-  IN_PROGRESS: "In Progress",
-  WAITING_RESPONSE: "Waiting",
-  RESOLVED: "Resolved",
-  CLOSED: "Closed",
-};
-
-const priorityMap: Record<string, string> = {
-  LOW: "Low",
-  MEDIUM: "Medium",
-  HIGH: "High",
-  URGENT: "Urgent",
-};
-const statusFilters = ["All", "Open", "In Progress", "Resolved", "Closed"];
-
-const lanes = [
-  { title: "Urgent Queue", note: "Priority staff and LEO reports" },
-  { title: "Bug Lane", note: "Game-breaking issues and exploits" },
-  { title: "Appeals", note: "Ban reviews and follow-ups" },
+const statusFilters = [
+  { value: "all", label: "All" },
+  { value: "open", label: "Open" },
+  { value: "active", label: "Active" },
+  { value: "resolved", label: "Resolved" },
+  { value: "closed", label: "Closed" },
 ];
-
-const statusHeat: Record<string, string> = {
-  Open: "green",
-  "In Progress": "",
-  Waiting: "",
-  Resolved: "green",
-  Closed: "dim",
-};
 
 export default function TicketsPage() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
-  const [activeStatus, setActiveStatus] = useState("All");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   useEffect(() => {
     async function fetchTickets() {
       try {
         const res = await fetch("/api/tickets");
         if (!res.ok) {
-          if (res.status === 401) {
-            setError("Please sign in to view your tickets");
-          } else {
-            setError("Failed to load tickets");
-          }
+          if (res.status === 401) setError("Please sign in to view your tickets");
+          else setError("Failed to load tickets");
           return;
         }
         const data = await res.json();
         setTickets(data);
-      } catch {
-        setError("Failed to load tickets");
-      } finally {
-        setLoading(false);
-      }
+      } catch { setError("Failed to load tickets"); }
+      finally { setLoading(false); }
     }
     fetchTickets();
   }, []);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return tickets.filter((ticket) => {
-      const displayStatus = statusMap[ticket.status] || ticket.status;
-      const matchesQuery =
-        !q ||
-        ticket.subject.toLowerCase().includes(q) ||
-        ticket.type.toLowerCase().includes(q);
-      const matchesStatus = activeStatus === "All" || displayStatus === activeStatus;
+      const matchesQuery = !q || ticket.subject.toLowerCase().includes(q) || ticket.type.toLowerCase().includes(q);
+      let matchesStatus = true;
+      if (statusFilter === "open") matchesStatus = ticket.status === "OPEN";
+      else if (statusFilter === "active") matchesStatus = ["IN_PROGRESS", "WAITING_RESPONSE"].includes(ticket.status);
+      else if (statusFilter === "resolved") matchesStatus = ticket.status === "RESOLVED";
+      else if (statusFilter === "closed") matchesStatus = ticket.status === "CLOSED";
       return matchesQuery && matchesStatus;
     });
-  }, [query, activeStatus, tickets]);
+  }, [query, statusFilter, tickets]);
 
-  if (loading) {
-    return (
-      <div className="relative">
-        <main className="wrap">
-          <div className="flex items-center justify-center min-h-[400px]">
-            <Loader2 className="h-8 w-8 animate-spin text-white/50" />
-          </div>
-        </main>
-      </div>
-    );
-  }
+  const stats = useMemo(() => ({
+    total: tickets.length,
+    open: tickets.filter((t) => t.status === "OPEN").length,
+    active: tickets.filter((t) => ["IN_PROGRESS", "WAITING_RESPONSE"].includes(t.status)).length,
+    resolved: tickets.filter((t) => t.status === "RESOLVED").length,
+  }), [tickets]);
 
-  if (error) {
-    return (
-      <div className="relative">
-        <main className="wrap">
-          <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-            <AlertCircle className="h-12 w-12 text-red-500" />
-            <p className="text-white/70">{error}</p>
-            <Link href="/auth/signin" className="btn primary">
-              Sign In
-            </Link>
-          </div>
-        </main>
-      </div>
-    );
-  }
+  if (loading) return (<div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-white/50" /></div>);
+
+  if (error) return (<div className="min-h-screen flex flex-col items-center justify-center gap-4"><AlertCircle className="h-12 w-12 text-red-500" /><p className="text-white/70">{error}</p><Link href="/auth/signin" className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-lg transition-colors">Sign In</Link></div>);
+
   return (
-    <div className="relative">
-      <main className="wrap">
-        <aside className="sidebar">
-          <motion.section
-            className="panel"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <div className="hd">
-              <h3>Ticket Search</h3>
-              <span className="text-xs text-white/50">Ctrl K</span>
-            </div>
-            <div className="bd">
-              <div className="search">
-                <input
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Search tickets, types, users..."
-                />
-                <div className="k">CTRL</div>
-                <div className="k">K</div>
-              </div>
-              <div className="filters">
-                {statusFilters.map((status) => (
-                  <button
-                    key={status}
-                    className={cn("chip", activeStatus === status && "on")}
-                    onClick={() => setActiveStatus(status)}
-                  >
-                    {status}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </motion.section>
-          <motion.section
-            className="panel"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.05 }}
-          >
-            <div className="hd">
-              <h3>Support Lanes</h3>
-              <span className="text-xs text-white/50">Live</span>
-            </div>
-            <div className="bd">
-              <div className="hotlist">
-                {lanes.map((lane) => (
-                  <div className="hot" key={lane.title}>
-                    <div className="l">
-                      <div className="t">{lane.title}</div>
-                      <div className="m">{lane.note}</div>
-                    </div>
-                    <div className="spark" aria-hidden="true" />
-                  </div>
-                ))}
-              </div>
-            </div>
-          </motion.section>
-        </aside>
-
-        <section className="main">
-          <div className="crumbs">Support &gt; Tickets</div>
-
-          <div className="headRow">
+    <div className="min-h-screen">
+      <main className="max-w-5xl mx-auto px-4 py-8">
+        <motion.div className="mb-8" initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
+          <div className="flex items-center justify-between">
             <div>
-              <h1>Support Tickets</h1>
-              <div className="desc">Priority support for bugs, reports, and account issues.</div>
+              <h1 className="text-3xl font-bold text-white">Support Tickets</h1>
+              <p className="text-white/50 mt-1">View and manage your support requests</p>
             </div>
-            <div className="toolbar">
-              <Link className="btn primary" href="/tickets/new">
-                <Plus className="h-4 w-4" />
-                New Ticket
-              </Link>
-              <button className="btn">Sort: Recent</button>
-            </div>
+            <Link href="/tickets/new" className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-lg transition-colors"><Plus className="h-4 w-4" />New Ticket</Link>
           </div>
-          {tickets.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 gap-4">
-              <Inbox className="h-12 w-12 text-white/30" />
-              <p className="text-white/50">No tickets yet</p>
-              <Link href="/tickets/new" className="btn primary">
-                <Plus className="h-4 w-4" />
-                Create Your First Ticket
-              </Link>
-            </div>
-          ) : (
-            <StaggerContainer className="threads">
-              {filtered.map((ticket) => {
-                const displayStatus = statusMap[ticket.status] || ticket.status;
-                const displayPriority = priorityMap[ticket.priority] || ticket.priority;
-                return (
-                  <StaggerItem key={ticket.id}>
-                    <Link href={`/tickets/${ticket.id}`}>
-                      <motion.div
-                        className="thread"
-                        whileHover={{ scale: 1.005 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        <div className={cn("heat", statusHeat[displayStatus])} />
-                        <div className="avatar">{ticket.type.charAt(0)}</div>
-                        <div className="meta">
-                          <div className="titleRow">
-                            <div className="tTitle">{ticket.subject}</div>
-                            <div className="tag">{ticket.type}</div>
-                            <div className={cn("tag", (ticket.priority === "HIGH" || ticket.priority === "URGENT") && "hot")}>
-                              {displayPriority}
-                            </div>
-                            <div className={cn("tag", ticket.status === "CLOSED" && "lock")}>
-                              {displayStatus}
-                            </div>
-                          </div>                          <div className="sub">
-                            <span>
-                              #{ticket.id.slice(0, 8)} - opened{" "}
-                              {formatDistanceToNow(new Date(ticket.createdAt), { addSuffix: true })}
-                            </span>
-                            <span>
-                              Last update{" "}
-                              <strong>
-                                {formatDistanceToNow(new Date(ticket.updatedAt), { addSuffix: true })}
-                              </strong>
-                            </span>
-                          </div>
-                        </div>
-                        <div className="stats">
-                          <div className="stat">
-                            <MessageSquare className="h-4 w-4" />
-                            <span>{ticket._count.TicketMessage}</span>
-                          </div>
-                          <div className="stat">
-                            <Clock className="h-4 w-4" />
-                            <span>{displayStatus}</span>
-                          </div>
-                        </div>
-                      </motion.div>
-                    </Link>
-                  </StaggerItem>
-                );
-              })}
-            </StaggerContainer>
-          )}
-          <div className="pager">
-            <div>Showing 1-{filtered.length} of {tickets.length} tickets</div>
-            <div className="pages">
-              <div className="page on">1</div>
-              <div className="page">2</div>
-              <div className="page">3</div>
-              <div className="page">&gt;</div>
-            </div>
-          </div>
-        </section>
+        </motion.div>
+        <motion.div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          {[{ label: "Total", value: stats.total, color: "white" },{ label: "Open", value: stats.open, color: "blue" },{ label: "Active", value: stats.active, color: "yellow" },{ label: "Resolved", value: stats.resolved, color: "green" }].map((stat) => (<div key={stat.label} className="p-4 rounded-xl bg-white/5 border border-white/10"><div className="text-sm text-white/50">{stat.label}</div><div className={cn("text-2xl font-bold mt-1", stat.color === "blue" && "text-blue-400", stat.color === "yellow" && "text-yellow-400", stat.color === "green" && "text-green-400", stat.color === "white" && "text-white")}>{stat.value}</div></div>))}
+        </motion.div>
+        <motion.div className="flex flex-col sm:flex-row gap-4 mb-6" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+          <div className="relative flex-1"><Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search tickets..." className="w-full pl-10 pr-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/40 focus:outline-none focus:border-white/20" /></div>
+          <div className="flex items-center gap-2"><Filter className="h-4 w-4 text-white/40" /><div className="flex gap-1">{statusFilters.map((filter) => (<button key={filter.value} onClick={() => setStatusFilter(filter.value)} className={cn("px-3 py-1.5 rounded-lg text-sm transition-colors", statusFilter === filter.value ? "bg-white/10 text-white" : "text-white/50 hover:text-white hover:bg-white/5")}>{filter.label}</button>))}</div></div>
+        </motion.div>
+        {tickets.length === 0 ? (<motion.div className="flex flex-col items-center justify-center py-16 gap-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }}><Inbox className="h-16 w-16 text-white/20" /><p className="text-white/50 text-lg">No tickets yet</p><p className="text-white/30 text-sm">Create your first support ticket to get help</p><Link href="/tickets/new" className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-lg transition-colors mt-4"><Plus className="h-4 w-4" />Create Ticket</Link></motion.div>) : filtered.length === 0 ? (<motion.div className="flex flex-col items-center justify-center py-16 gap-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }}><Search className="h-16 w-16 text-white/20" /><p className="text-white/50 text-lg">No matching tickets</p><p className="text-white/30 text-sm">Try adjusting your search or filters</p></motion.div>) : (<motion.div className="space-y-3" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>{filtered.map((ticket, idx) => (<motion.div key={ticket.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 * idx }}><TicketCard ticket={ticket} /></motion.div>))}</motion.div>)}
+        {filtered.length > 0 && (<div className="mt-8 text-center text-sm text-white/40">Showing {filtered.length} of {tickets.length} tickets</div>)}
       </main>
     </div>
   );

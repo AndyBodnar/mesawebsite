@@ -462,6 +462,7 @@ model Ticket {
   priority                       Ticket_priority @default(MEDIUM)
   subject                        String
   status                         Ticket_status   @default(OPEN)
+  isOwnerOnly                    Boolean         @default(false)
   createdAt                      DateTime        @default(now())
   updatedAt                      DateTime
   closedAt                       DateTime?
@@ -471,10 +472,12 @@ model Ticket {
   User_Ticket_userIdToUser       User            @relation("Ticket_userIdToUser", fields: [userId], references: [id], onDelete: Cascade)
   TicketMessage                  TicketMessage[]
   TicketRating                   TicketRating?
+  TicketLog                      TicketLog[]
 
   @@index([assignedToId])
   @@index([status])
   @@index([userId])
+  @@index([isOwnerOnly])
 }
 
 model TicketMessage {
@@ -498,6 +501,21 @@ model TicketRating {
   createdAt DateTime @default(now())
   ticketId  String   @unique
   Ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+}
+
+model TicketLog {
+  id        String   @id @default(cuid())
+  action    String
+  details   String?  @db.Text
+  createdAt DateTime @default(now())
+  ticketId  String
+  userId    String
+  Ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+  @@index([createdAt])
+  @@index([userId])
 }
 
 model User {
@@ -536,6 +554,7 @@ model User {
   Ticket_Ticket_assignedToIdToUser         Ticket[]             @relation("Ticket_assignedToIdToUser")
   Ticket_Ticket_userIdToUser               Ticket[]             @relation("Ticket_userIdToUser")
   TicketMessage                            TicketMessage[]
+  TicketLog                                TicketLog[]
   UserBan_UserBan_issuedByIdToUser         UserBan[]            @relation("UserBan_issuedByIdToUser")
   UserBan_UserBan_userIdToUser             UserBan[]            @relation("UserBan_userIdToUser")
   UserWarning_UserWarning_issuedByIdToUser UserWarning[]        @relation("UserWarning_issuedByIdToUser")

@@ -7,6 +7,7 @@ import { Calendar, Clock, MapPin, Users, Plus, Loader2, CalendarOff, X, Server, 
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { useSession } from "next-auth/react";
+import { HtmlEditor } from "@/components/ui/html-editor";
 
 interface EventUser {
   id: string;
@@ -31,11 +32,12 @@ interface Event {
 }
 
 export default function EventsPage() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [serverEvents, setServerEvents] = useState<Event[]>([]);
   const [communityEvents, setCommunityEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   // Create modal state
   const [showCreate, setShowCreate] = useState(false);
@@ -49,10 +51,11 @@ export default function EventsPage() {
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
-  const isAdmin = session?.user && ["ADMIN", "SUPERADMIN"].includes((session.user as { role?: string }).role || "");
+  const isAdmin = userRole === "ADMIN" || userRole === "SUPERADMIN";
+  const isLoggedIn = status === "authenticated" && session?.user;
 
   useEffect(() => {
-    async function fetchEvents() {
+    async function fetchData() {
       try {
         const [serverRes, communityRes] = await Promise.all([
           fetch("/api/events?type=Server&upcoming=true"),
@@ -74,8 +77,25 @@ export default function EventsPage() {
         setLoading(false);
       }
     }
-    fetchEvents();
+    fetchData();
   }, []);
+
+  // Fetch user role separately
+  useEffect(() => {
+    async function fetchUserRole() {
+      if (status !== "authenticated") return;
+      try {
+        const res = await fetch("/api/user/me");
+        if (res.ok) {
+          const data = await res.json();
+          setUserRole(data.role);
+        }
+      } catch {
+        // Ignore errors
+      }
+    }
+    fetchUserRole();
+  }, [status]);
 
   function openCreateModal(type: "Server" | "Community") {
     setCreateType(type);
@@ -177,7 +197,7 @@ export default function EventsPage() {
             onClick={() => setShowCreate(false)}
           >
             <motion.div
-              className="bg-zinc-900 border border-white/10 rounded-xl p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto"
+              className="bg-zinc-900 border border-white/10 rounded-xl p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto"
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
@@ -210,13 +230,11 @@ export default function EventsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm text-white/70 mb-2">Description *</label>
-                  <textarea
+                  <label className="block text-sm text-white/70 mb-2">Description * (supports HTML formatting)</label>
+                  <HtmlEditor
                     value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Event description"
-                    rows={3}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-white placeholder-white/40 focus:outline-none focus:border-white/20 resize-none"
+                    onChange={setDescription}
+                    placeholder="Describe your event... Use the toolbar to format text, add links, images, and more."
                     disabled={creating}
                   />
                 </div>
@@ -227,7 +245,7 @@ export default function EventsPage() {
                     type="text"
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
-                    placeholder="Event location"
+                    placeholder="Event location (e.g., Diamond Casino, Legion Square)"
                     className="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-white placeholder-white/40 focus:outline-none focus:border-white/20"
                     disabled={creating}
                   />
@@ -377,7 +395,7 @@ export default function EventsPage() {
                 <h2 className="text-lg font-semibold">Community Events</h2>
                 <span className="text-sm text-white/50">Events by community members</span>
               </div>
-              {session?.user && (
+              {isLoggedIn && (
                 <button className="btn primary" onClick={() => openCreateModal("Community")}>
                   <Plus className="h-4 w-4" />
                   Create Community Event

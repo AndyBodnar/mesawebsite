@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptions, hasStaffAccess, isOwner, StaffRole } from "@/lib/auth";
+import { logTicketAction } from "@/lib/tickets";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -16,7 +17,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: "Ticket not found" }, { status: 404 });
     }
 
-    const isStaff = ["ADMIN", "SUPERADMIN", "MODERATOR"].includes(session.user.role);
+    const staffRole = (session.user.staffRole || "user") as StaffRole;
+    const isStaff = hasStaffAccess(staffRole);
+    const userIsOwner = isOwner(staffRole);
+
+    // Owner-only tickets can only be accessed by owners
+    if (ticket.isOwnerOnly && !userIsOwner) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    // Non-staff can only reply to their own tickets
     if (ticket.userId !== session.user.id && !isStaff) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -25,13 +35,43 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: "Ticket is closed" }, { status: 400 });
     }
 
-    const { content } = await req.json();
+    const { content, isInternal } = await req.json();
+
+    if (!content?.trim()) {
+      return NextResponse.json({ error: "Message content required" }, { status: 400 });
+    }
+
+    // Only staff can post internal notes
+    const messageIsInternal = isStaff && isInternal === true;
+
     const message = await db.ticketMessage.create({
-      data: { id: crypto.randomUUID(), content, ticketId: id, userId: session.user.id, isInternal: isStaff },
-      include: { User: { select: { id: true, name: true, image: true, role: true } } },
+      data: {
+        id: crypto.randomUUID(),
+        content: content.trim(),
+        ticketId: id,
+        userId: session.user.id,
+        isInternal: messageIsInternal,
+      },
+      include: { User: { select: { id: true, name: true, image: true, staffRole: true } } },
     });
 
-    await db.ticket.update({ where: { id }, data: { updatedAt: new Date() } });
+    // Update ticket timestamp and set to waiting if staff replied
+    const updateData: Record<string, unknown> = { updatedAt: new Date() };
+    if (isStaff && !messageIsInternal && ticket.status === "OPEN") {
+      updateData.status = "IN_PROGRESS";
+    } else if (!isStaff && ticket.status === "WAITING_RESPONSE") {
+      updateData.status = "IN_PROGRESS";
+    }
+
+    await db.ticket.update({ where: { id }, data: updateData });
+
+    // Log the action
+    await logTicketAction(
+      id,
+      session.user.id,
+      messageIsInternal ? "INTERNAL_NOTE" : "MESSAGE_ADDED"
+    );
+
     return NextResponse.json(message, { status: 201 });
   } catch (error) {
     console.error("Failed to send message:", error);

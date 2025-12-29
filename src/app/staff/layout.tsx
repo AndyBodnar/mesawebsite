@@ -19,6 +19,7 @@ import {
   Loader2,
   LogIn,
   Ban,
+  Ticket,
 } from 'lucide-react'
 
 type StaffRole = 'owner' | 'admin' | 'staff' | 'user'
@@ -28,6 +29,7 @@ const navigation = [
   { name: 'Players', href: '/staff/players', icon: Users, minRole: 'staff' as StaffRole },
   { name: 'Logs', href: '/staff/logs', icon: ScrollText, minRole: 'staff' as StaffRole },
   { name: 'Live Map', href: '/staff/map', icon: Map, minRole: 'staff' as StaffRole },
+  { name: 'Tickets', href: '/staff/tickets', icon: Ticket, minRole: 'staff' as StaffRole },
   { name: 'Bans & Warns', href: '/staff/moderation', icon: Ban, minRole: 'admin' as StaffRole },
   { name: 'Server', href: '/staff/server', icon: Server, minRole: 'admin' as StaffRole },
   { name: 'Admins', href: '/staff/admins', icon: Shield, minRole: 'owner' as StaffRole },
